@@ -1,0 +1,553 @@
+---
+title: 'TCR QC'
+author: "FHIL\nDerrikGratz"
+date: '`r Sys.Date()`'
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      fig.width = 8, fig.height = 6,
+                      cache=FALSE, cache.lazy = FALSE) 
+
+library(tidyverse)  ## General R logic
+library(here)       ## Easier specification of file locations
+library(immunarch)  ## MixCR output parsing and stats  
+library(khroma)     ## colorblind friendly palettes
+# library(yaml)       ## parses config yaml
+# library(reshape2)   ## DF manipulation
+library(jsonlite)   ## Parse QC json
+set.seed(44)
+```
+
+```{r}
+figures <- list()
+```
+
+# Functions
+
+```{r}
+parse_name <- function(x) {
+  x <- as.data.frame(str_match(x, '(^.)-(F\\d)(L|S)(A|B)?_(.*)'))
+  colnames(x) <- c(
+    'Sample', 'Kit', 'Individual', 'Size', 'Replicate', 'Chain'
+  )
+  x %>%
+    mutate(
+      Replicate = if_else(is.na(Replicate), 'A', Replicate),
+      Kit = case_when(
+        Kit == 'N' ~ 'NEB',
+        Kit == 'Q' ~ 'QiaSeq',
+        Kit == 'T' ~ 'Takara',
+        .default = 'unknown'
+      ),
+      Chain = if_else(Chain=='', 'other', Chain)
+    )
+}
+```
+
+
+# Qiaseq
+
+```{r}
+data_dir <- here('../processing/mixcr/qiaseq/umi18')
+```
+
+## Pipeline QC
+
+```{r}
+qc_metrics_text <- list.files(path = data_dir, pattern = '*.qc.txt', recursive = TRUE, full.names = TRUE)
+names(qc_metrics_text) <- gsub('.+(Q-F\\w+).+', '\\1', qc_metrics_text)
+qc_metrics_text <- lapply(qc_metrics_text, read.table, sep=':', strip.white=TRUE)
+qc_metrics_text <- rbindlist(qc_metrics_text, idcol='sample')
+qc_metrics_text <- qc_metrics_text %>%
+  separate(V2, c('value', 'status'), sep = '\\[', ) %>%
+  mutate(value = readr::parse_number(value)) %>%
+  mutate(status = substr(status, 1, nchar(status)-1))
+```
+
+```{r}
+metrics <- (qc_metrics_text %>%
+  filter(grepl('L', sample)) %>% 
+  group_by(V1) %>%
+  summarise(m = max(value)) %>%
+  filter(m > 0))$V1
+metrics <- c(
+  "Successfully aligned reads",
+  "Off target (non TCR/IG) reads", 
+  "Reads with no V or J hits",
+  "Reads used in clonotypes", 
+  "Alignments that do not cover CDR3", 
+  "Unassigned alignments in clonotype assembly" ,
+  "UMIs artificial diversity eliminated", 
+  "Reads dropped in tags error correction and filtering",
+  "Barcode collisions in clonotype assembly"
+)
+figures[['QC_large']] <-
+qc_metrics_text %>%
+  filter(grepl('L', sample)) %>%
+  filter(V1 %in% metrics) %>% 
+  mutate(V1 = factor(V1, levels=metrics)) %>%
+ggplot(aes(x=sample, y=value, fill=status)) +
+  geom_col() +
+  theme_bw() + 
+  scale_fill_manual(values = c("OK"='#34C400', 'WARN'='goldenrod', 'ALERT'='#F54411')) +
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank()) +
+  facet_wrap(~V1, scales = 'free', labeller = label_wrap_gen(25), ncol=2) +
+  labs(x='Sample', y='Value (%)', fill='MixCR status')
+
+figures[['QC_large']]
+```
+
+```{r}
+metrics <- (qc_metrics_text %>%
+  filter(grepl('S', sample)) %>% 
+  group_by(V1) %>%
+  summarise(m = max(value)) %>%
+  filter(m > 0))$V1
+metrics <- c(
+  "Successfully aligned reads",
+  "Off target (non TCR/IG) reads", 
+  "Reads with no V or J hits",
+  "Reads used in clonotypes", 
+  "Alignments that do not cover CDR3", 
+  "Unassigned alignments in clonotype assembly" ,
+  "UMIs artificial diversity eliminated", 
+  "Reads dropped in tags error correction and filtering",
+  "Barcode collisions in clonotype assembly"
+)
+figures[['QC_small']] <-
+qc_metrics_text %>%
+  filter(grepl('S', sample)) %>%
+  filter(V1 %in% metrics) %>% 
+  mutate(V1 = factor(V1, levels=metrics)) %>%
+ggplot(aes(x=sample, y=value, fill=status)) +
+  geom_col() +
+  theme_bw() + 
+  scale_fill_manual(values = c("OK"='#34C400', 'WARN'='goldenrod', 'ALERT'='#F54411')) +
+  # theme(axis.title.x=element_blank(),
+  #       axis.text.x=element_blank(),
+  #       axis.ticks.x=element_blank()) +
+  facet_wrap(~V1, scales = 'free', labeller = label_wrap_gen(25), ncol=2) +
+  labs(x='Sample', y='Value (%)', fill='MixCR status')
+
+figures[['QC_small']]
+```
+
+
+```{r metrics_json, eval=FALSE}
+qc_metrics <- list.files(path = data_dir, pattern = '*.qc.json', recursive = TRUE, full.names = TRUE)
+names(qc_metrics) <- gsub('.+(Q-F\\w+).+', '\\1', qc_metrics)
+qc_metrics <- lapply(qc_metrics, fromJSON, flatten=TRUE)
+qc_metrics <- lapply(qc_metrics, function(x) {
+  x %>% select(step, status, check.type, check.label, payload.value, payload.printedValue)
+})
+qc_metrics <- rbindlist(qc_metrics, idcol = 'sample')
+```
+
+```{r metrics_json_plot, fig.width=10, fig.height=6, eval=FALSE}
+metrics <- (qc_metrics %>%
+  filter(grepl('L', sample)) %>%
+  group_by(check.label) %>%
+  summarise(m = max(payload.value)) %>%
+  filter(m > 0))$check.label
+
+# metrics <- c(
+#   "Successfully aligned reads",
+#   "Off target (non TCR/IG) reads",
+#   "Reads with no V or J hits",
+#   "Reads with no barcode"
+#
+#   "Barcode collisions in clonotype assembly"
+#   "UMIs artificial diversity eliminated"
+#   "Reads dropped in tags error correction and filtering"
+#   "Reads dropped in UMI error correction and whitelist"
+#
+#   "Alignments without assembling feature"
+#  [5]
+#  [7]
+#  [9] "Reads dropped in tags filtering"                      "Tag groups with no assembling feature"
+# [11]              "Unassigned alignments in clonotype assembly"
+# [13] "Reads used in clonotypes"                             "Alignments dropped due to low sequence quality"
+# [15] "Clones dropped in post-filtering"                     "Alignments dropped in clones post-filtering"
+# )
+qc_metrics %>%
+  filter(grepl('L', sample)) %>%
+  filter(check.label %in% metrics) %>%
+  mutate(check.label %in%)
+ggplot(aes(x=sample, y=payload.value, fill=sample)) +
+  geom_col() +
+  theme_bw() +
+  theme(axis.title.x=element_blank(),
+        axis.text.x=element_blank(),
+        axis.ticks.x=element_blank()) +
+  facet_wrap(~check.label, scales = 'free', labeller = label_wrap_gen(25), ncol=2) +
+  labs(x='Sample', y='Value', fill='Sample')
+```
+
+
+## Load data
+
+```{r}
+metadata <- read.table(here('config/metadata.txt'), header = TRUE)
+data <- repLoad(data_dir)$data
+
+## Subsetting for only TRA and TRB output
+data <- data[names(data)[grepl('TRA|TRB', names(data))]]
+large_libraries <- data[names(data)[grepl('[0-9]L', names(data))]]
+small_libraries <- data[names(data)[grepl('[0-9]S', names(data))]]
+```
+
+# NEB
+
+```{r}
+data_dir <- here('../processing/mixcr/neb')
+```
+
+
+## Load data
+
+```{r}
+metadata <- read.table(here('config/metadata.txt'), header = TRUE)
+metadata <- as.tibble(rbindlist(lapply(names(data$data), parse_name)))
+
+data$meta <- metadata
+
+tmp <- repFilter(data, .method='by.meta', list(Chain = include('TRA', 'TRB')))
+
+## Subsetting for only TRA and TRB output
+data <- data[names(data)[grepl('TRA|TRB', names(data))]]
+large_libraries <- data[names(data)[grepl('[0-9]L', names(data))]]
+small_libraries <- data[names(data)[grepl('[0-9]S', names(data))]]
+```
+
+# Clone count
+
+```{r}
+figures[['chain_recovery_large']] <- 
+  repExplore(large_libraries, .method = c("clones")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('L', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Clones, group=chain)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Total recovery')
+figures[['chain_recovery_large']]
+```
+
+```{r}
+figures[['chain_recovery_small']] <- 
+  repExplore(small_libraries, .method = c("clones")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('S', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Clones, group=chain)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Total recovery')
+figures[['chain_recovery_small']]
+```
+
+
+# Unique clone count
+
+```{r}
+figures[['unique_clones_large']] <- 
+  repExplore(large_libraries, .method = c("volume")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('L', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Volume, group=chain)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Unique clones')
+figures[['unique_clones_large']]
+```
+
+```{r}
+figures[['unique_clones_small']] <- 
+  repExplore(small_libraries, .method = c("volume")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('S', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Volume, group=chain)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Unique clones')
+figures[['unique_clones_small']]
+```
+
+# Clonality
+
+```{r}
+figures[['clone_count_proportion_large']] <-
+  repClonality(large_libraries, .method='rare') %>%
+  as.data.frame() %>%
+  rownames_to_column('sample') %>%
+  filter(grepl('TRA|TRB', sample)) %>%
+  reshape2::melt(id.col='sample') %>%
+  group_by(sample) %>%
+  mutate(x = value-lag(value, default = 0)) %>%
+  separate(sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=x, fill=variable)) +
+  geom_col(position='stack') +
+  theme_bw() +
+  # theme(axis.text.x = element_text(angle=90)) +
+  scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
+  labs(x='sample', y='Portion of repertoire', fill='Clonotype counts') +
+  facet_wrap(~sample, ncol=2) 
+figures[['clone_count_proportion_large']]
+```
+
+```{r}
+figures[['clone_count_proportion_small']] <-
+  repClonality(small_libraries, .method='rare') %>%
+  as.data.frame() %>%
+  rownames_to_column('sample') %>%
+  filter(grepl('TRA|TRB', sample)) %>%
+  reshape2::melt(id.col='sample') %>%
+  group_by(sample) %>%
+  mutate(x = value-lag(value, default = 0)) %>%
+  separate(sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=x, fill=variable)) +
+  geom_col(position='stack') +
+  theme_bw() +
+  # theme(axis.text.x = element_text(angle=90)) +
+  scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
+  labs(x='sample', y='Portion of repertoire', fill='Clonotype counts', title='Rare clonal proportion', caption='Summary of proportion of clonotypes with specific counts of supporting clones/UMIs') +
+  facet_wrap(~sample, ncol=2) 
+figures[['clone_count_proportion_small']]
+```
+
+```{r}
+figures[['clone_proportion_large']] <-
+  repClonality(large_libraries, .method='homeo') %>%
+  as.data.frame() %>%
+  rownames_to_column('sample') %>%
+  filter(grepl('TRA|TRB', sample)) %>%
+  reshape2::melt(id.col='sample') %>%
+  group_by(sample) %>%
+  # mutate(x = value-lag(value, default = 0)) %>%
+  separate(sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=value, fill=variable)) +
+  geom_col(position='stack') +
+  theme_bw() +
+  # theme(axis.text.x = element_text(angle=90)) +
+  # scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
+  labs(x='Sample', y='Portion of repertoire', fill='Clonotype group', title = 'Clonal space homeostasis', caption= 'Summary of proportion of clonotypes with specific frequencies') +
+  facet_wrap(~sample, ncol=2) 
+figures[['clone_proportion_large']]
+```
+
+```{r}
+figures[['clone_proportion_small']] <-
+  repClonality(small_libraries, .method='homeo') %>%
+  as.data.frame() %>%
+  rownames_to_column('sample') %>%
+  filter(grepl('TRA|TRB', sample)) %>%
+  reshape2::melt(id.col='sample') %>%
+  group_by(sample) %>%
+  # mutate(x = value-lag(value, default = 0)) %>%
+  separate(sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=value, fill=variable)) +
+  geom_col(position='stack') +
+  theme_bw() +
+  # theme(axis.text.x = element_text(angle=90)) +
+  # scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
+  labs(x='Sample', y='Portion of repertoire', fill='Clonotype group', title = 'Clonal space homeostasis', caption= 'Summary of proportion of clonotypes with specific frequencies') +
+  facet_wrap(~sample, ncol=2) 
+figures[['clone_proportion_small']]
+```
+
+# Diversity estimation
+
+```{r}
+figures[['simpson_small']] <-
+repDiversity(small_libraries, .method = 'inv.simp') %>%
+  filter(grepl('A$|B$', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Value)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Simpson index')
+  
+figures[['simpson_small']]
+```
+
+```{r}
+figures[['simpson_large']] <-
+repDiversity(large_libraries, .method = 'inv.simp') %>%
+  filter(grepl('A$|B$', Sample)) %>%
+  separate(Sample, c('sample', 'chain'), sep='_') %>%
+  ggplot(aes(x=chain, y=Value)) +
+  geom_col(position = 'dodge') +
+  theme_bw() +
+  facet_wrap(~sample, strip.position = 'top', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='Chain', y='Simpson index')
+figures[['simpson_large']]
+```
+
+# Clonal overlap
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_all_tra']] <-
+  data[names(data)[grepl('TRA', names(data))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_all_tra']] 
+```
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_all_trb']] <-
+  data[names(data)[grepl('TRB', names(data))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_all_trb']] 
+```
+
+## Small
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_small_trb']] <-
+  small_libraries[names(small_libraries)[grepl('TRB', names(small_libraries))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_small_trb']] 
+```
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_small_tra']] <-
+  small_libraries[names(small_libraries)[grepl('TRA', names(small_libraries))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_small_tra']] 
+```
+
+## Small
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_large_trb']] <-
+  large_libraries[names(large_libraries)[grepl('TRB', names(large_libraries))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_large_trb']] 
+```
+
+```{r, fig.width=8, fig.height=8}
+figures[['overlap_large_tra']] <-
+  large_libraries[names(large_libraries)[grepl('TRA', names(large_libraries))]] %>%
+  repOverlap(.method = 'overlap') %>% 
+  vis()
+figures[['overlap_large_tra']] 
+```
+
+
+# Saturation curves
+
+## Small
+
+```{r}
+downsampled_obj_small <- list()
+for (j in names(small_libraries)) {
+  for (i in seq(1e4, 5e5, 1e4)) {
+    k <- sum(small_libraries[[j]]$Clones)
+    if (i < k) {
+      downsampled_obj_small[[paste0(j, '_', as.character(i))]] <- repSample(small_libraries[[j]], .method='downsample', .n = i)
+    } 
+  } 
+  downsampled_obj_small[[paste0(j, '_', as.character(k))]] <- small_libraries[[j]]
+}
+```
+
+```{r}
+figures[['clone_saturation_curves_small']] <-
+repExplore(downsampled_obj_small, .method = c("volume")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('S', Sample)) %>%
+  separate(Sample, c('sample', 'chain', 'libsize'), sep='_') %>%
+  # separate(chain, c('chain', 'libsize'), sep='_') %>%
+  mutate(libsize= as.numeric(libsize)) %>%
+ggplot(aes(x=libsize, y=Volume, color=sample, fill=sample, group=sample)) +
+  geom_path() + #position = 'dodge'
+  geom_point(size=0.25) +
+  theme_bw() +
+  facet_wrap(~chain, strip.position = 'bottom', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='UMI count', y='Unique clones', caption = 'The final point for each curve is the full library size')
+# tmp
+figures[['clone_saturation_curves_small']]
+```
+
+## Large
+
+```{r}
+downsampled_obj_large <- list()
+for (j in names(large_libraries)) {
+  for (i in seq(5e5, 5e6, 5e5)) {
+    k <- sum(large_libraries[[j]]$Clones)
+    if (i < k) {
+      downsampled_obj_large[[paste0(j, '_', as.character(i))]] <- repSample(large_libraries[[j]], .method='downsample', .n = i)
+    } 
+  } 
+  downsampled_obj_large[[paste0(j, '_', as.character(k))]] <- large_libraries[[j]]
+}
+```
+
+```{r}
+figures[['clone_saturation_curves_large']] <-
+repExplore(downsampled_obj_large, .method = c("volume")) %>%#"volume", "count", "len", 
+  filter(grepl('TRA|TRB', Sample)) %>%
+  # filter(grepl('S', Sample)) %>%
+  separate(Sample, c('sample', 'chain', 'libsize'), sep='_') %>%
+  # separate(chain, c('chain', 'libsize'), sep='_') %>%
+  mutate(libsize= as.numeric(libsize)) %>%
+ggplot(aes(x=libsize, y=Volume, color=sample, fill=sample, group=sample)) +
+  geom_path() + #position = 'dodge'
+  geom_point(size=0.25) +
+  theme_bw() +
+  facet_wrap(~chain, strip.position = 'bottom', ncol=2) +
+  # theme(panel.spacing = unit(0, "lines"), 
+  #        strip.background = element_blank(),
+  #        strip.placement = "outside") +
+  labs(x='UMI count', y='Unique clones', caption = 'The final point for each curve is the full library size')
+# tmp
+figures[['clone_saturation_curves_large']]
+```
+
+# Render report
+
+```{r}
+## This only works if all the variables called in the format file 
+## are in the current environment. Check the format file to tweak aesthetics 
+rmarkdown::render(here('scripts/01.format.Rmd'),
+                  output_file = '01_QC.html',
+                  output_dir = here('reports'))
+```
