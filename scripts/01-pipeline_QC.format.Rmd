@@ -1,5 +1,5 @@
 ---
-title: 'TCR Analysis'
+title: 'TCR QC'
 author: |
  | Derrik Gratz
  | FHIL
@@ -25,8 +25,11 @@ MixCR settings were kept as consistent as possible. Primer locations and UMI des
 Data was generated with the following kits:
 
 [Qiaseq Targeted RNA-seq Panel for T-cell receptor kit](https://www.qiagen.com/us/products/discovery-and-translational-research/next-generation-sequencing/rna-sequencing/t-cell-receptor-sequencing/qiaseq-targeted-rnaseq-panel-for-t-cell-receptor)
+
 [Takara SMARTer Human TCR a/b Profiling Kit v2](https://www.takarabio.com/products/next-generation-sequencing/immune-profiling/human-repertoire/human-tcrv2-profiling-kit-for-illumina-sequencing)
+
 [NEBNext Immune Sequencing Kit (Human)](https://www.neb.com/en-us/products/e6320-nebnext-immune-sequencing-kit-human#Product%20Information)
+
 [Cellecta DriverMap AIR TCR-BCR Profiling Kit (Human RNA)](https://cellecta.com/collections/drivermap-adaptive-immune-receptor-air-profiling/products/drivermap%E2%84%A2-air-tcr-bcr-profiling-kit-human-rna-24-and-96-rxn?variant=43268706435330)
 
 Samples follow a naming convention describing 
@@ -40,12 +43,33 @@ Samples follow a naming convention describing
 knitr::kable(qc_metadata %>% select(-chain))
 ```
 
-
 ***
+
+# FastQC
+
+Quick check of sequencing quality
+
+## Qiaseq
+
+```{r}
+knitr::kables(list(figures[['fastqc_QiaSeq_L']], figures[['fastqc_QiaSeq_S']]))
+```
+
+## NEB
+
+```{r}
+knitr::kables(list(figures[['fastqc_NEB_L']], figures[['fastqc_NEB_S']]))
+```
+
+## Takara
+
+```{r}
+knitr::kables(list(figures[['fastqc_Takara_L']], figures[['fastqc_Takara_S']]))
+```
 
 # QC
 
-<details><summary>Full explanation of metrics</summary>
+<details open><summary>Full explanation of metrics</summary>
 
 [Source: MixCR](https://mixcr.com/mixcr/reference/qc-list-of-checks/)
 
@@ -137,189 +161,36 @@ figures[['QC_large']]
 
 ***
 
-# Clone recovery
-
-Number of recovered chains/clones
-
-## Large {.tabset}
-
-### TRA/TRB
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['chain_recovery_large_TRATRB']]
-```
-
-### Other
-
-```{r}
-figures[['chain_recovery_large_other']]
-```
-
-
-## Small {.tabset}
-
-### TRA/TRB
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['chain_recovery_small_TRATRB']]
-```
-
-### Other
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['chain_recovery_small_other']]
-```
-
-***
-
-# Unique clone count
-
-Number of unique chains/clones
-
-## Large {.tabset}
-
-### TRATRB
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['unique_clones_large_TRATRB']]
-```
-
-### other
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['unique_clones_large_other']]
-```
-
-## Small {.tabset}
-
-### TRATRB
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['unique_clones_small_TRATRB']]
-```
-
-### other
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['unique_clones_large_other']]
-```
-
-***
-
-# Clone count proportions
-
-Relative abundance for the groups of rare clonotypes with low counts
-
-## Large
-
-```{r, fig.width = 8, fig.height = 4}
-figures[['clone_count_proportion_large_TRATRB']]
-```
-
-## Small
-
-```{r, fig.width = 8, fig.height = 4}
-figures[['clone_count_proportion_small_TRATRB']]
-```
-
-***
-
-# Clone frequency proportion
-
-Proportion of repertoire occupied by clonal groups with specific abundances.
-
-## Large
-
-```{r, fig.width = 8, fig.height = 4}
-figures[['clone_frequency_proportion_large_TRATRB']]
-```
-
-## Small
-
-```{r, fig.width = 8, fig.height = 4}
-figures[['clone_frequency_proportion_small_TRATRB']]
-```
-
-***
-
-# Diversity estimation
-
-Inverse Simpson index - effective number of types that is obtained when the weighted arithmetic mean is used to quantify average proportional abundance of types in the dataset of interest.
-
-## Large
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['simpson_large']]
-```
-
-## Small
-
-```{r, fig.width = 6, fig.height = 4}
-figures[['simpson_small']]
-```
-
-***
-
-# Clonal overlap
-
-Measuring similarity between samples by overlap of repertoires
-
-## All {.tabset}
-
-### TRA
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_all_tra']] 
-```
-
-### TRB
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_all_trb']] 
-```
-
-## Small {.tabset}
-
-### TRA
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_small_tra']] 
-```
-
-### TRB
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_small_trb']] 
-```
-
-## Large {.tabset}
-
-### TRA
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_large_tra']] 
-```
-
-### TRB
-
-```{r, fig.width=8, fig.height=8}
-figures[['overlap_large_trb']] 
-```
-
-***
-
 # Saturation curves
 
-Number of unique clonotypes observed at different downsampling rates. This is slightly different than a traditional *sequencing* saturation curve relating UMIs to total reads. This relationship addresses the question: **what target UMIs/cell do we need to capture the full repertoire of the input?** Downsampling was performed on the UMI level, *after* processing, which may be slightly biased, but is much more computationally efficient than downsampling and rerunning the full processing pipeline, but that could be done if preferred.
+Downsampling was performed on the UMI level after alignment. This is a slightly biased selection, but is much more computationally efficient than downsampling and rerunning the full processing pipeline, and all samples were downsampled in the same fashion.
 
-## Large
+## UMIs
+
+### Large
 
 ```{r}
-figures[['clone_saturation_curves_large']]
+figures[['saturation_umis_large']]
 ```
 
-## Small
+### Small
 
 ```{r}
-figures[['clone_saturation_curves_small']]
+figures[['saturation_umis_small']]
+```
+
+## Clonotypes
+
+Number of unique clonotypes observed at different downsampling rates. This relationship addresses the question: **what target UMIs/cell do we need to capture the full repertoire of the input?** 
+
+### Large
+
+```{r}
+figures[['saturation_clonotypes_large']] 
+```
+
+### Small
+
+```{r}
+figures[['saturation_clonotypes_small']] 
 ```
