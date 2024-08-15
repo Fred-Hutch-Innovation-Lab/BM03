@@ -23,6 +23,8 @@ Qiaseq:
 --tag-pattern "^(R1:*) \ ^(UMI:N{18})N{12}(R2:*)"
 NEB:
 --tag-pattern "^N{22}(R1:*) \ ^(UMI:N{17})N{7}(R2:*)"
+Cellexa:
+--tag-pattern "^(R1:*)\^(UMI:N{18})(R2:*)"
 
 After `mixcr align`, `refineTagsAndSort` was ran. Next, we ran `mixcr assemble`
 with the following flags:
