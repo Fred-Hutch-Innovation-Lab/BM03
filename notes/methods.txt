@@ -1,0 +1,51 @@
+fastq files were inspected with FastQC 0.11.9. This data was only used for 
+quality checks and did not act as input to downstream analyses. We may opt to 
+use, publish, or share some of the quality information, so this is recorded.
+
+Sequencing data was processed with MixCR 4.6.0-226-devel. Parameters for each
+sample were selected based on available information from the product information 
+for each kit, as well as documentation provided by MixCR on similar kits/vendors.
+
+For all kits, MixCR alignment was ran with the following flags:
+
+```
+-p generic-amplicon-with-umi 
+--species hsa 
+--rna 
+--rigid-left-alignment-boundary 
+--floating-right-alignment-boundary C 
+```
+The `--tag-pattern` flag was adjusted for the UMI/barcode design of each kit. 
+
+Takara:
+--tag-pattern "^N{7}(R1:*) \ ^(UMI:N{12})N{7}(R2:*)" 
+Qiaseq:
+--tag-pattern "^(R1:*) \ ^(UMI:N{18})N{12}(R2:*)"
+NEB:
+--tag-pattern "^N{22}(R1:*) \ ^(UMI:N{17})N{7}(R2:*)"
+
+After `mixcr align`, `refineTagsAndSort` was ran. Next, we ran `mixcr assemble`
+with the following flags:
+
+```
+-OassemblingFeatures="CDR3" 
+-OseparateByC=true 
+-OseparateByJ=true
+-OseparateByV=true
+```
+
+Data was downsampled based on the lowest UMI count of all samples at that
+input RNA level. Large input samples were downsampled to 311422 UMIs. Small input
+samples were downsampled to 9961 UMIs. Downsampling was performed via the `mixcr downsample` command.
+`mixcr exportClones` was ran with the `-uniqueTagCount` to generate the final 
+clonotype data for each chain. 
+
+MixCR QC metrics on alignment, tag correction, assembly, etc. were calculated on
+the whole dataset prior to downsampling, as that was one of the last steps.
+Most of the metrics are reported as percentages or proportions, and can be 
+expected to be relatively consistent regardless of downsampling. 
+
+Chain clonotype data from MixCR was imported into R for analysis via the package 
+Immunarch 0.9.1. Clonal count, gene usage, repertoire overlap, and diversity metrics
+were calculated via Immunarch and visualized with ggplot2 and other accessory libraries. 
+See the project github for full details on commands and packages used for analysis. 

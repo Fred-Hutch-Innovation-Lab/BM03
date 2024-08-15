@@ -1,0 +1,15 @@
+Data directory:
+Qiaseq:
+/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240614_VH00738_246_AAFVY2MM5/FHIL_06142024_2024-06-14T19_50_58_68f53f1-421632874/BCLConvert_06_15_2024_16_53_29Z-740072376
+Takara:
+/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240614_VH00738_246_AAFVY2MM5/240723_VH00738_256_AAFWG5MM5
+NEB:
+/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240730_VH00738_259_AAFWGHHM5/FHIL_07302024_2024-07-30T17_34_21_8f33e36-426337156/BCLConvert_08_01_2024_00_22_32Z-755097350/
+Cellecta:
+/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240813_VH00738_265_AAG3G77M5/FHIL_08132024_2024-08-14T21_59_11_2bb08af-428286878/BCL_Convert_08_14_2024_15_02_05-760993109/
+
+Kit websites:
+[Qiaseq Targeted RNA-seq Panel for T-cell receptor kit](https://www.qiagen.com/us/products/discovery-and-translational-research/next-generation-sequencing/rna-sequencing/t-cell-receptor-sequencing/qiaseq-targeted-rnaseq-panel-for-t-cell-receptor)
+[Takara SMARTer Human TCR a/b Profiling Kit v2](https://www.takarabio.com/products/next-generation-sequencing/immune-profiling/human-repertoire/human-tcrv2-profiling-kit-for-illumina-sequencing)
+[NEBNext Immune Sequencing Kit (Human)](https://www.neb.com/en-us/products/e6320-nebnext-immune-sequencing-kit-human#Product%20Information)
+[Cellecta DriverMap AIR TCR-BCR Profiling Kit (Human RNA)](https://cellecta.com/collections/drivermap-adaptive-immune-receptor-air-profiling/products/drivermap%E2%84%A2-air-tcr-bcr-profiling-kit-human-rna-24-and-96-rxn?variant=43268706435330)
