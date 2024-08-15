@@ -12,17 +12,9 @@ knitr::opts_chunk$set(echo = FALSE,
 
 library(tidyverse)  ## General R logic
 library(here)       ## Easier specification of file locations
-# library(immunarch)  ## MixCR output parsing and stats
-# library(khroma)     ## colorblind friendly palettes
-# library(yaml)       ## parses config yaml
-# library(reshape2)   ## DF manipulation
-# library(jsonlite)   ## Parse QC json
 library(ggbeeswarm) ## swarm plots
-# library(ggh4x) ## Nested facet plots
-# library(plotly)
-rbindlist <- data.table::rbindlist
-str_match <- stringr::str_match
-
+library(stringr)    ## Str_match
+library(data.table) ## rbindlist
 set.seed(44)
 ```
 
