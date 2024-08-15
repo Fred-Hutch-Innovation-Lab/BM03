@@ -21,7 +21,8 @@ library(kableExtra)
 # Overview
 
 This report shows data from the bulk TCR sequencing from the BM03 project processed using [MixCR](https://mixcr.com/). 
-MixCR settings were kept as consistent as possible. Primer locations and UMI descriptions were changed based on specifications in kit manuals. 
+MixCR settings were kept as consistent as possible. Primer locations and UMI descriptions were changed based on specifications in kit manuals. This report focuses on overall library quality for diagnostics of sequencing and pipeline issues, and hence does **not used subsampled data**.
+
 Data was generated with the following kits:
 
 [Qiaseq Targeted RNA-seq Panel for T-cell receptor kit](https://www.qiagen.com/us/products/discovery-and-translational-research/next-generation-sequencing/rna-sequencing/t-cell-receptor-sequencing/qiaseq-targeted-rnaseq-panel-for-t-cell-receptor)
@@ -67,7 +68,7 @@ knitr::kables(list(figures[['fastqc_NEB_L']], figures[['fastqc_NEB_S']]))
 knitr::kables(list(figures[['fastqc_Takara_L']], figures[['fastqc_Takara_S']]))
 ```
 
-# QC
+# MixCR QC
 
 <details open><summary>Full explanation of metrics</summary>
 
@@ -163,9 +164,13 @@ figures[['QC_large']]
 
 # Saturation curves
 
-Downsampling was performed on the UMI level after alignment. This is a slightly biased selection, but is much more computationally efficient than downsampling and rerunning the full processing pipeline, and all samples were downsampled in the same fashion.
+Downsampling was performed on the UMI level after alignment. This is a slightly biased selection, but is much more computationally efficient than downsampling and rerunning the full processing pipeline, and all samples were downsampled in the same fashion. Note the log scale on the x axis.
 
 ## UMIs
+
+:::: {class='fluid-row'}
+
+::: {class='col-md-6'}
 
 ### Large
 
@@ -173,15 +178,27 @@ Downsampling was performed on the UMI level after alignment. This is a slightly 
 figures[['saturation_umis_large']]
 ```
 
+:::
+
+::: {class='col-md-6'}
+
 ### Small
 
 ```{r}
 figures[['saturation_umis_small']]
 ```
 
+:::
+
+::::
+
 ## Clonotypes
 
-Number of unique clonotypes observed at different downsampling rates. This relationship addresses the question: **what target UMIs/cell do we need to capture the full repertoire of the input?** 
+Number of unique clonotypes observed at different downsampling rates. This relationship addresses the question: **what target UMIs/sample do we need to capture the full repertoire of the input?** 
+
+:::: {class='fluid-row'}
+
+::: {class='col-md-6'}
 
 ### Large
 
@@ -189,8 +206,16 @@ Number of unique clonotypes observed at different downsampling rates. This relat
 figures[['saturation_clonotypes_large']] 
 ```
 
+:::
+
+::: {class='col-md-6'}
+
 ### Small
 
 ```{r}
 figures[['saturation_clonotypes_small']] 
 ```
+
+:::
+
+::::

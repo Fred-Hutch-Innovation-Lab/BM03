@@ -26,6 +26,10 @@ str_match <- stringr::str_match
 set.seed(44)
 ```
 
+```{r}
+figures <- list()
+```
+
 # Functions
 
 ```{r}
@@ -47,20 +51,12 @@ parse_name <- function(x) {
 }
 ```
 
+# Pipeline QC
 
 ```{r}
-figures <- list()
-```
-
-```{r}
-data_dir <- c(here('../processing/mixcr/qiaseq'),
-              here('../processing/mixcr/neb'),
-              here('../processing/mixcr/takara'))
-```
-
-```{r}
-qc_metrics <- list.files(path = data_dir, pattern = '*.qc.txt', recursive = TRUE, full.names = TRUE)
-names(qc_metrics) <- gsub('.+(.-F\\w+).+', '\\1', qc_metrics)
+data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
+qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE)
+names(qc_metrics) <- gsub('.+(.-F\\w+)_QC.+', '\\1', qc_metrics)
 qc_metrics <- lapply(qc_metrics, read.table, sep=':', strip.white=TRUE)
 qc_metrics <- data.table::rbindlist(qc_metrics, idcol='sample')
 qc_metrics <- qc_metrics %>%
@@ -70,7 +66,6 @@ qc_metrics <- qc_metrics %>%
   mutate(status = factor(status, levels = c('OK', 'WARN', 'ALERT')))
 ```
 
-
 ```{r}
 qc_metadata <- rbindlist(lapply(unique(qc_metrics$sample), parse_name))
 qc_metadata <- qc_metadata %>%
@@ -79,47 +74,12 @@ qc_metadata <- qc_metadata %>%
                 ))
 ```
 
-# FastQC
-
-```{r}
-data_dir <- dir(here('../processing/fastqc/'), 'fastqc_data.txt', recursive = TRUE, full.names = TRUE)
-fastqc <- lapply(data_dir, 
-       function(x) {
-         sample <- gsub('.*(.-F\\d[^_]+).+', '\\1', x)
-         x <- readLines(x,n=8)[c(7,8)]
-         x <- strsplit(x, '\t')
-         return(list(sample=sample, total_sequences=x[[1]][2], poor_sequences=x[[2]][2]))
-}) %>%
-  rbindlist() %>%
-  unique()
-```
-
-```{r}
-for (i in unique(qc_metadata$size)) {
-  for (k in unique(qc_metadata$kit)) {
-    figures[[paste0(c('fastqc', k, i), collapse ='_')]] <- 
-      fastqc %>%
-      left_join(qc_metadata, by = 'sample') %>%
-      filter(size==i,
-             kit==k) %>%
-      select(sample, total_sequences, poor_sequences) %>%
-      mutate(total_sequences = as.numeric(total_sequences),
-             poor_sequences = as.numeric(poor_sequences)) %>%
-      knitr::kable(format.args = list(big.mark = ","))
-  }
-}
-figures[['fastqc_NEB_S']]
-```
-
-
-# Pipeline QC
-
 ```{r, fig.width=10, fig.height=8}
 metrics <- c(
-  "Successfully aligned reads",
   "Off target (non TCR/IG) reads", 
   "Reads with no V or J hits",
   "Reads used in clonotypes", 
+  "Successfully aligned reads",
   "Alignments that do not cover CDR3", 
   "Unassigned alignments in clonotype assembly" ,
   "UMIs artificial diversity eliminated", 
@@ -130,7 +90,7 @@ figures[['QC_large']] <-
   left_join(qc_metrics, qc_metadata, by='sample') %>%
   filter(grepl('L', sample)) %>%
   filter(V1 %in% metrics) %>% 
-  # mutate(V1 = factor(V1, levels=metrics)) %>%
+  mutate(V1 = factor(V1, levels=metrics)) %>%
 ggplot(aes(x=kit, y=value)) +
   geom_boxplot(outliers = FALSE) +
   geom_beeswarm(aes(color=status, shape=individual), size=2) +
@@ -148,10 +108,10 @@ figures[['QC_large']]
 
 ```{r, fig.width=10, fig.height=8}
 metrics <- c(
-  "Successfully aligned reads",
   "Off target (non TCR/IG) reads", 
   "Reads with no V or J hits",
   "Reads used in clonotypes", 
+  "Successfully aligned reads",
   "Alignments that do not cover CDR3", 
   "Unassigned alignments in clonotype assembly" ,
   "UMIs artificial diversity eliminated", 
@@ -162,7 +122,7 @@ figures[['QC_small']] <-
   left_join(qc_metrics, qc_metadata, by='sample') %>%
   filter(grepl('S', sample)) %>%
   filter(V1 %in% metrics) %>% 
-  # mutate(V1 = factor(V1, levels=metrics)) %>%
+  mutate(V1 = factor(V1, levels=metrics)) %>%
 ggplot(aes(x=kit, y=value)) +
   geom_boxplot(outliers = FALSE) +
   geom_beeswarm(aes(color=status, shape=individual), size=2) +
@@ -176,6 +136,39 @@ ggplot(aes(x=kit, y=value)) +
   labs(x='Sample', y='Value (%)', color='MixCR\nstatus')
 
 figures[['QC_small']]
+```
+
+
+# FastQC
+
+```{r}
+data_dir <- dir(here('../processing/fastqc/'), 'fastqc_data.txt', recursive = TRUE, full.names = TRUE)
+fastqc <- lapply(data_dir, 
+       function(x) {
+         sample <- gsub('.*(.-F\\d[^_]+).+', '\\1', x)
+         x <- readLines(x,n=8)[c(7,8)]
+         x <- strsplit(x, '\t')
+         return(list(sample=sample, total_sequences=x[[1]][2], poor_sequences=x[[2]][2]))
+}) %>%
+  rbindlist() %>%
+  unique()
+```
+
+```{r}
+for (i in c('L', 'S')) {
+  for (k in c('NEB', 'Takara', 'QiaSeq')) {
+    figures[[paste0(c('fastqc', k, i), collapse ='_')]] <- 
+      fastqc %>%
+      left_join(qc_metadata, by = 'sample') %>%
+      filter(size==i,
+             kit==k) %>%
+      select(sample, total_sequences, poor_sequences) %>%
+      mutate(total_sequences = as.numeric(total_sequences),
+             poor_sequences = as.numeric(poor_sequences)) %>%
+      knitr::kable(format.args = list(big.mark = ","))
+  }
+}
+figures[['fastqc_NEB_S']]
 ```
 
 # Saturation curves
