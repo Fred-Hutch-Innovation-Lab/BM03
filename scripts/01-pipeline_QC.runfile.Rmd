@@ -197,7 +197,7 @@ downsampling_umis %>%
   geom_path() +
   # theme_bw() +
   scale_x_log10() +
-  facet_wrap(~ kit, scales='free_y', ncol=1) +
+  facet_wrap(~ kit, scales='fixed', ncol=4) +
   labs(x='Total reads', y='UMIs', color='Individual')
 figures[['saturation_umis_large']] 
 ```
@@ -214,7 +214,7 @@ downsampling_umis %>%
   geom_path() +
   # theme_bw() +
   scale_x_log10() +
-  facet_wrap(~ kit, scales='free_y', ncol=1) +
+  facet_wrap(~ kit, scales='fixed', ncol=4) +
   labs(x='Total reads', y='UMIs', color='Individual')
 figures[['saturation_umis_small']] 
 ```
@@ -251,7 +251,7 @@ downsampling_clonotypes %>%
   geom_path() +
   # theme_bw() +
   scale_x_log10() +
-  facet_wrap(~ kit, scales='free_y', ncol=1) +
+  facet_wrap(~ kit, scales='fixed', ncol=4) +
   labs(x='Total reads', y='Clonotypes', color='Individual')
 figures[['saturation_clonotypes_large']] 
 ```
@@ -269,7 +269,7 @@ downsampling_clonotypes %>%
   # theme_bw() +
   scale_x_log10() +
   # theme(text=element_text(size=16,  family="sans")) +
-  facet_wrap(~ kit, scales='free_y', ncol=1) +
+  facet_wrap(~ kit, scales='fixed', ncol=4) +
   labs(x='Total reads', y='Clonotypes', color='Individual')
 figures[['saturation_clonotypes_small']] 
 ```

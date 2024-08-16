@@ -174,7 +174,7 @@ Downsampling was performed on the UMI level after alignment. This is a slightly 
 
 ### Large
 
-```{r}
+```{r, fig.width = 8, fig.height = 6}
 figures[['saturation_umis_large']]
 ```
 
@@ -184,7 +184,7 @@ figures[['saturation_umis_large']]
 
 ### Small
 
-```{r}
+```{r, fig.width = 8, fig.height = 6}
 figures[['saturation_umis_small']]
 ```
 
@@ -202,7 +202,7 @@ Number of unique clonotypes observed at different downsampling rates. This relat
 
 ### Large
 
-```{r}
+```{r, fig.width = 8, fig.height = 6}
 figures[['saturation_clonotypes_large']] 
 ```
 
@@ -212,7 +212,7 @@ figures[['saturation_clonotypes_large']]
 
 ### Small
 
-```{r}
+```{r, fig.width = 8, fig.height = 6}
 figures[['saturation_clonotypes_small']] 
 ```
 
