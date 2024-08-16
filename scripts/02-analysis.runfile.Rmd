@@ -49,7 +49,7 @@ parse_name <- function(x) {
 }
 ```
 
-```{r}
+```{r, eval=FALSE}
 my_repLoad <- function(filepath) {
   x <- read.csv(filepath, header=TRUE, sep='\t') %>%
     select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
@@ -131,7 +131,7 @@ saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled.rds'))
 ```
 
 ```{r full_data, eval=FALSE, message=FALSE}
-data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
+data_dir <- here('../processing/mixcr/full_data/')
 rep_data <- repLoad(data_dir)
 
 #parse metadata from samplenames, based on previous function
@@ -148,24 +148,60 @@ metadata$chain <- factor(metadata$chain,
                            'other'
                          ))
 rep_data$meta <- metadata
-# rep_data <- repFilter(rep_data, .method = 'by.meta',
-#             list(Sample = exclude('N-F1LB.alignmentsAIRR', 'N-F1LA.alignmentsAIRR')))
+
+## Fix clone count to be UMIs rather than reads
+## still retains read counts too, but sets Clones and Proportion to be UMI based
+for (sample in names(rep_data$data)) {
+  kit <- filter(rep_data$meta, Sample == sample)
+  kit <- tolower(kit$kit)
+  x <- file.path(here('../processing/mixcr/full_data/'),
+                 kit,
+                 gsub('(.-F[0-9][^_]+).+','\\1', sample),
+                 paste0(sample, '.tsv'))
+            
+  #        pattern=paste0(sample, '.tsv'),
+  #        recursive = TRUE, full.names = TRUE) %>%
+  x <- read.csv(x, header=TRUE, sep='\t') %>%
+    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
+    rename('Clones'=uniqueMoleculeCount,
+           'Proportion'=uniqueMoleculeFraction)
+  y <- rep_data$data[[sample]]
+  y <- y %>%
+    rename('Read.count'=Clones,
+           'Read.proportion'=Proportion)
+  rep_data$data[[sample]] <- merge(x,y, by.x='cloneId', by.y='Clone.ID') %>%
+    as_tibble()
+}
 saveRDS(rep_data, here('rds/rep_data_full.rds'))
 ```
 
 ```{r}
 rep_data <- readRDS(here('rds/rep_data_downsampled.rds'))
-# rep_data_large_tratrb <- repFilter(rep_data_downsampled,
-#                                    .method = 'by.meta',
-#                                    list(chain = include('TRA', 'TRB'),
-#                                         size = include('L')))
-# 
-# rep_data_small_tratrb <- repFilter(rep_data_downsampled,
-#                                    .method = 'by.meta',
-#                                    list(chain = include('TRA', 'TRB'),
-#                                         size = include('S')))
 ```
 
+```{r Bootstrap_downsampling_test, eval=FALSE}
+tmp <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'),
+                 kit = include('QiaSeq'),
+                 size = include('L'))) 
+
+k <- 100
+bootstrap_counts <- as.data.frame(matrix(nrow=6, ncol=k), row.names = names(tmp$data))
+bootstrap_diversity <- as.data.frame(matrix(nrow=6, ncol=k), row.names = names(tmp$data))
+for (j in 1:k) {
+  tmp1 <- repSample(tmp$data, .method='downsample', .n=150000)
+  bootstrap_diversity[,j] <- repDiversity(.data=tmp1, .method = 'inv.simp')$Value
+  bootstrap_counts[,j] <- repExplore(.data = tmp1, .method = c("volume"))$Volume
+}
+
+bootstrap_counts %>%
+  rownames_to_column('Sample') %>%
+  melt() %>%
+ggplot(aes(x=Sample, y=value)) +
+  geom_boxplot()
+
+```
 
 # Clone count
 
