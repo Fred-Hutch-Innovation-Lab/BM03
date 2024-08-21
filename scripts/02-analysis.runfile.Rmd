@@ -43,6 +43,7 @@ parse_name <- function(x) {
         kit == 'N' ~ 'NEB',
         kit == 'Q' ~ 'QiaSeq',
         kit == 'T' ~ 'Takara',
+        kit == 'C' ~ 'Cellecta',
         .default = 'unknown'
       )
     )
@@ -85,9 +86,9 @@ tmp <- lapply(dir(here('../processing/mixcr/qiaseq/Q-F1LA/'), pattern = '*_[TI].
               my_repLoad)
 ```
 
-# Load TCR data
+# Generate RDS
 
-```{r downsampled_data, eval=FALSE}
+```{r downsampled_data_UMI, eval=FALSE}
 data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
 rep_data_downsampled <- repLoad(data_dir)
 
@@ -127,7 +128,50 @@ for (sample in names(rep_data_downsampled$data)) {
     as_tibble()
 }
 
-saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled.rds'))
+saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled_umi.rds'))
+```
+
+```{r downsampled_data_reads, eval=FALSE}
+data_dir <- here('../processing/mixcr/downsampled_data/by_reads/')
+rep_data_downsampled <- repLoad(data_dir)
+
+#parse metadata from samplenames, based on previous function
+metadata <- as_tibble(rbindlist(lapply(names(rep_data_downsampled$data), parse_name)))
+metadata <- metadata %>%
+  mutate(Sample = sample,
+         sample = NULL)
+metadata$chain[is.na(metadata$chain)] <- 'other'
+metadata$chain <- factor(metadata$chain, 
+                         levels = c(
+                           'TRA', 'TRB',
+                           'TRD', 'TRG',
+                           'ILH', 'IGK', 'IGH', 'IGL',
+                           'other'
+                         ))
+rep_data_downsampled$meta <- metadata
+
+## Fix clone count to be UMIs rather than reads
+## still retains read counts too, but sets Clones and Proportion to be UMI based
+for (sample in names(rep_data_downsampled$data)) {
+  x <- file.path(here('../processing/mixcr/downsampled_data/by_reads/'), 
+                 gsub('(.-F[0-9][^_]+).+','\\1', sample),
+                 paste0(sample, '.tsv'))
+            
+  #        pattern=paste0(sample, '.tsv'),
+  #        recursive = TRUE, full.names = TRUE) %>%
+  x <- read.csv(x, header=TRUE, sep='\t') %>%
+    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
+    rename('Clones'=uniqueMoleculeCount,
+           'Proportion'=uniqueMoleculeFraction)
+  y <- rep_data_downsampled$data[[sample]]
+  y <- y %>%
+    rename('Read.count'=Clones,
+           'Read.proportion'=Proportion)
+  rep_data_downsampled$data[[sample]] <- merge(x,y, by.x='cloneId', by.y='Clone.ID') %>%
+    as_tibble()
+}
+
+saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled_reads.rds'))
 ```
 
 ```{r full_data, eval=FALSE, message=FALSE}
@@ -175,8 +219,10 @@ for (sample in names(rep_data$data)) {
 saveRDS(rep_data, here('rds/rep_data_full.rds'))
 ```
 
+# Load TCR data
+
 ```{r}
-rep_data <- readRDS(here('rds/rep_data_downsampled.rds'))
+rep_data <- readRDS(here('rds/rep_data_downsampled_umi.rds'))
 ```
 
 ```{r Bootstrap_downsampling_test, eval=FALSE}
@@ -603,8 +649,8 @@ figures[['trbv_usage_cor_large']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -628,8 +674,8 @@ figures[['trbv_usage_cor_small']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -655,8 +701,8 @@ figures[['trbj_usage_cor_large']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -680,8 +726,8 @@ figures[['trbj_usage_cor_small']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -707,8 +753,8 @@ figures[['trav_usage_cor_large']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -732,8 +778,8 @@ figures[['trav_usage_cor_small']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -759,8 +805,8 @@ figures[['traj_usage_cor_large']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -784,8 +830,8 @@ figures[['traj_usage_cor_small']] <- repFilter(rep_data,
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Correlation') +
   viridis::scale_fill_viridis() + 
@@ -860,8 +906,8 @@ figures[['overlap_all_tra']] <-
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(10.5,22.5), color='red') + 
-  geom_hline(yintercept = c(10.5,22.5), color='red') + 
+  geom_vline(xintercept = c(12.5,22.5, 34.5), color='red') + 
+  geom_hline(yintercept = c(12.5,22.5, 34.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -886,8 +932,8 @@ figures[['overlap_all_trb']] <-
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(10.5,22.5), color='red') + 
-  geom_hline(yintercept = c(10.5,22.5), color='red') + 
+  geom_vline(xintercept = c(12.5,22.5, 34.5), color='red') + 
+  geom_hline(yintercept = c(12.5,22.5, 34.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -915,8 +961,8 @@ figures[['overlap_small_tra']] <-
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -942,8 +988,8 @@ figures[['overlap_small_trb']] <-
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(4.5,10.5), color='red') + 
-  geom_hline(yintercept = c(4.5,10.5), color='red') + 
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -971,8 +1017,8 @@ figures[['overlap_large_tra']] <-
          Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -998,8 +1044,8 @@ figures[['overlap_large_trb']] <-
          Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
   ggplot(aes(x=Var1, y=Var2, fill=value)) +
   geom_tile() +
-  geom_vline(xintercept = c(6.5,12.5), color='red') + 
-  geom_hline(yintercept = c(6.5,12.5), color='red') + 
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
   theme_bw() +
   labs(x='Sample 1', y='Sample 2', fill = 'Overlap') +
   viridis::scale_fill_viridis() + 
@@ -1024,7 +1070,7 @@ imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds")
 figures[['clonal_overlap_mds_small_TRB']] <-
   as.data.frame(imm_ov1$points) %>%
   rownames_to_column('Sample') %>%
-  left_join(metadata, by='Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
   mutate(V1=scale(V1), V2=scale(V2)) %>%
   ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
   geom_point() +
@@ -1044,7 +1090,7 @@ imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds")
 figures[['clonal_overlap_mds_small_TRA']] <-
   as.data.frame(imm_ov1$points) %>%
   rownames_to_column('Sample') %>%
-  left_join(metadata, by='Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
   mutate(V1=scale(V1), V2=scale(V2)) %>%
   ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
   geom_point() +
@@ -1066,7 +1112,7 @@ imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds")
 figures[['clonal_overlap_mds_large_TRB']] <-
   as.data.frame(imm_ov1$points) %>%
   rownames_to_column('Sample') %>%
-  left_join(metadata, by='Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
   mutate(V1=scale(V1), V2=scale(V2)) %>%
   ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
   geom_point() +
@@ -1086,7 +1132,7 @@ imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds")
 figures[['clonal_overlap_mds_large_TRA']] <-
   as.data.frame(imm_ov1$points) %>%
   rownames_to_column('Sample') %>%
-  left_join(metadata, by='Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
   mutate(V1=scale(V1), V2=scale(V2)) %>%
   ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
   geom_point() +
@@ -1096,28 +1142,31 @@ figures[['clonal_overlap_mds_large_TRA']]
 
 # Clonal abundance scaterplots
 
-```{r, fig.height=14, fig.width=14}
-tmp <- repFilter(rep_data,
+```{r, fig.height=6, fig.width=6}
+plotdata <- repFilter(rep_data,
             .method = 'by.meta',
             list(chain = include('TRA'),
-                 size = include('L'))) 
+                 size = include('L'),
+                 kit = include('NEB'),
+                 individual = include('F2'))) 
 
-tmp <- lapply(tmp$data, select, c('CDR3.aa', 'Proportion')) %>%
+plotdata <- lapply(plotdata$data, select, c('CDR3.aa', 'Proportion')) %>%
   rbindlist(idcol='Sample') %>%
-  mutate(Sample = str_sub(Sample,1,  -6)) %>%
-  filter(grepl('N', Sample)) 
-tmp <- tmp %>%
-  inner_join(tmp, by='CDR3.aa', suffix=c('_x', '_y'), relationship = 'many-to-many') %>%
+  mutate(Sample = str_sub(Sample,1,  -6)) #%>%
+  # filter(grepl('N', Sample)) 
+plotdata <- plotdata %>%
+  inner_join(plotdata, by='CDR3.aa', suffix=c('_x', '_y'), relationship = 'many-to-many') %>%
   filter(Sample_x != Sample_y) %>%
-  filter(max(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire
-figures[['clonal_abundance_scatter_large_TRA']] <- ggplot(tmp, aes(x=Proportion_x, y=Proportion_y)) +
+  filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire
+figures[['clonal_abundance_NF2_TRA']] <- ggplot(plotdata, aes(x=Proportion_x, y=Proportion_y)) +
   geom_point(alpha=0.7, size=0.5) +
+  labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))
   # geom_density_2d_filled() +
-  facet_grid(Sample_x ~ Sample_y, scales='free')
-figures[['clonal_abundance_scatter_large_TRA']]
+  # facet_grid(Sample_x ~ Sample_y, scales='free')
+figures[['clonal_abundance_NF2_TRA']]
 ```
 
-```{r, fig.height=25, fig.width=25}
+```{r, eval=FALSE, fig.height=25, fig.width=25}
 tmp <- repFilter(rep_data,
             .method = 'by.meta',
             list(chain = include('TRB'),

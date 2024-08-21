@@ -23,6 +23,24 @@ library(kableExtra)
 This report shows data from the bulk TCR sequencing from the BM03 project processed using [MixCR](https://mixcr.com/). 
 MixCR settings were kept as consistent as possible. Primer locations and UMI descriptions were changed based on specifications in kit manuals. This report focuses on overall library quality for diagnostics of sequencing and pipeline issues, and hence does **not used subsampled data**.
 
+This report includes data from all sequencing done as of Aug 21 2024. Data is pulled from these repositories:
+
+Takara:
+
+`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240723_VH00738_256_AAFWG5MM5/FHIL_07232024_2024-07-25T19_16_58_f111bc7-425851455/BCL_Convert_07_25_2024_12_22_52-752495789/`
+
+celecta:
+
+`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240813_VH00738_265_AAG3G77M5/FHIL_08132024_2024-08-14T21_59_11_2bb08af-428286878/BCL_Convert_08_14_2024_15_02_05-760993109/`
+
+neb:
+
+`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240730_VH00738_259_AAFWGHHM5/FHIL_07302024_2024-07-30T17_34_21_8f33e36-426337156/BCLConvert_08_01_2024_00_22_32Z-755097350/`
+
+qiaseq:
+
+`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240614_VH00738_246_AAFVY2MM5/FHIL_06142024_2024-06-14T19_50_58_68f53f1-421632874/BCLConvert_06_15_2024_16_53_29Z-740072376/`
+
 Data was generated with the following kits:
 
 [Qiaseq Targeted RNA-seq Panel for T-cell receptor kit](https://www.qiagen.com/us/products/discovery-and-translational-research/next-generation-sequencing/rna-sequencing/t-cell-receptor-sequencing/qiaseq-targeted-rnaseq-panel-for-t-cell-receptor)
@@ -49,6 +67,13 @@ knitr::kable(qc_metadata %>% select(-chain))
 # FastQC
 
 Quick check of sequencing quality
+
+## Cellecta
+
+```{r}
+knitr::kables(list(figures[['fastqc_Cellecta_L']], figures[['fastqc_Cellecta_S']]))
+```
+
 
 ## Qiaseq
 
@@ -146,6 +171,10 @@ Number of clonotypes that were dropped in the post filtering.
 
 Number of aligned reads that were dropped along with clonotypes in the post filtering.
 
+**UMI artificial diversity eliminated:**
+
+Number of barcodes that were corrected or dropped during the barcode sequencing and PCR error correction. Barcodes with low sequence quality nucleotides that can’t be corrected (i.e. no barcodes with good quality within the allowed number of mutations) are dropped. It is normal to have up to 50% of barcodes corrected, however unexpectedly high numbers here is a signal about poor sequencing quality.
+
 </details>
 
 ## Small 
@@ -174,7 +203,7 @@ Downsampling was performed on the UMI level after alignment. This is a slightly 
 
 ### Large
 
-```{r, fig.width = 8, fig.height = 6}
+```{r, fig.width = 10, fig.height = 6}
 figures[['saturation_umis_large']]
 ```
 
@@ -184,7 +213,7 @@ figures[['saturation_umis_large']]
 
 ### Small
 
-```{r, fig.width = 8, fig.height = 6}
+```{r, fig.width = 10, fig.height = 6}
 figures[['saturation_umis_small']]
 ```
 
@@ -202,7 +231,7 @@ Number of unique clonotypes observed at different downsampling rates. This relat
 
 ### Large
 
-```{r, fig.width = 8, fig.height = 6}
+```{r, fig.width = 10, fig.height = 6}
 figures[['saturation_clonotypes_large']] 
 ```
 
@@ -212,7 +241,7 @@ figures[['saturation_clonotypes_large']]
 
 ### Small
 
-```{r, fig.width = 8, fig.height = 6}
+```{r, fig.width = 10, fig.height = 6}
 figures[['saturation_clonotypes_small']] 
 ```
 

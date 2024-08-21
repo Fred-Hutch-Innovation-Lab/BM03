@@ -37,6 +37,7 @@ parse_name <- function(x) {
         kit == 'N' ~ 'NEB',
         kit == 'Q' ~ 'QiaSeq',
         kit == 'T' ~ 'Takara',
+        kit == 'C' ~ 'Cellecta',
         .default = 'unknown'
       )
     )
@@ -47,8 +48,8 @@ parse_name <- function(x) {
 
 ```{r}
 data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
-qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE)
-names(qc_metrics) <- gsub('.+(.-F\\w+)_QC.+', '\\1', qc_metrics)
+qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
+names(qc_metrics) <- gsub('.+(.-F\\w+).[qQ][cC].+', '\\1', qc_metrics)
 qc_metrics <- lapply(qc_metrics, read.table, sep=':', strip.white=TRUE)
 qc_metrics <- data.table::rbindlist(qc_metrics, idcol='sample')
 qc_metrics <- qc_metrics %>%
@@ -148,7 +149,7 @@ fastqc <- lapply(data_dir,
 
 ```{r}
 for (i in c('L', 'S')) {
-  for (k in c('NEB', 'Takara', 'QiaSeq')) {
+  for (k in c('NEB', 'Takara', 'QiaSeq', 'Cellecta')) {
     figures[[paste0(c('fastqc', k, i), collapse ='_')]] <- 
       fastqc %>%
       left_join(qc_metadata, by = 'sample') %>%

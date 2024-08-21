@@ -21,3 +21,15 @@ N-F2SB  NEB F2  S B
 N-F4L  NEB  F4  L A
 N-F5L  NEB  F4  L A
 N-F5S  NEB  F5  S A
+C-F1LA  Cellecta  F1  L A
+C-F1LB  Cellecta  F1  L B
+C-F1SA  Cellecta  F1  S A
+C-F1SB  Cellecta  F1  S B
+C-F2LA  Cellecta  F2  L A
+C-F2LB  Cellecta  F2  L B
+C-F2SA  Cellecta  F2  S A
+C-F2SB  Cellecta  F2  S B
+C-F4L  Cellecta F4  L A
+C-F4S  Cellecta F4  S A
+C-F5L  Cellecta F5  L A
+C-F5S  Cellecta F5  S A
