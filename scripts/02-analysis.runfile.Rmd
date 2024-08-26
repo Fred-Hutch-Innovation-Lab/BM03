@@ -25,6 +25,10 @@ set.seed(44)
 ```
 
 ```{r}
+dataset <- 'downsampled_by_read'# 'full' 'downsampled_by_umi' 
+```
+
+```{r}
 figures <- list()
 ```
 
@@ -222,7 +226,13 @@ saveRDS(rep_data, here('rds/rep_data_full.rds'))
 # Load TCR data
 
 ```{r}
-rep_data <- readRDS(here('rds/rep_data_downsampled_umi.rds'))
+if (dataset == 'downsampled_by_read') {
+  rep_data <- readRDS(here('rds/rep_data_downsampled_reads.rds'))
+} else if (dataset == 'downsampled_by_umi') {
+  rep_data <- readRDS(here('rds/rep_data_downsampled_umi.rds'))
+} else if (dataset == 'full') {
+  rep_data <- readRDS(here('rds/rep_data_full.rds'))
+}
 ```
 
 ```{r Bootstrap_downsampling_test, eval=FALSE}
@@ -1192,7 +1202,16 @@ ggsave(here('figures/facet_grid_genes.png'), width = unit(15, 'in'), height = un
 ```{r}
 ## This only works if all the variables called in the format file 
 ## are in the current environment. Check the format file to tweak aesthetics 
+
+if (dataset == 'downsampled_by_read') {
+  outfile <- '02_analysis_downsample_by_reads.html'
+} else if (dataset == 'downsampled_by_umi') {
+  outfile <- '02_analysis_downsample_by_umi.html'
+} else if (dataset == 'full') {
+  outfile <- '02_analysis_full_data.html' 
+}
+
 rmarkdown::render(here('scripts/02-analysis.format.Rmd'),
-                  output_file = '02_analysis.html',
+                  output_file = outfile,
                   output_dir = here('reports'))
 ```
