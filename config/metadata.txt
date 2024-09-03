@@ -19,7 +19,7 @@ N-F2LB  NEB F2  L B
 N-F2SA  NEB F2  S A
 N-F2SB  NEB F2  S B
 N-F4L  NEB  F4  L A
-N-F5L  NEB  F4  L A
+N-F5L  NEB  F5  L A
 N-F5S  NEB  F5  S A
 C-F1LA  Cellecta  F1  L A
 C-F1LB  Cellecta  F1  L B
