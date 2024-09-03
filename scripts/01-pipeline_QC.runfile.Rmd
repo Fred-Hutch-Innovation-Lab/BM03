@@ -46,9 +46,129 @@ parse_name <- function(x) {
 
 # Pipeline QC
 
+```{r, eval=FALSE}
+library(jsonlite)
+library(ggalluvial)
+tmp <- read_json(here('../processing/mixcr/full_data/neb/N-F5S/N-F5S.report.json'))
+tmp$totalReadsProcessed
+tmp$aligned
+tmp$notAligned
+
+df0 <- data.frame(c('aligned', 'not_aligned'), c(tmp$aligned, tmp$notAligned), 'totalReadsProcessed')
+colnames(df0) <- c('node', 'value', 'prev_node')
+
+df1 <- melt(as.data.frame(tmp$notAlignedReasons))
+colnames(df1) <- c('node', 'value')
+df1$prev_node <- 'not_aligned'
+
+df2 <- melt(lapply(tmp$chainUsage$chains, function(x) {x$total}))
+colnames(df2) <- c('value', 'node')
+df2$prev_node <- 'aligned'
+
+df3 <- melt(lapply(tmp$chainUsage$chains, function(x) {
+  x$goodChains <- x$total - (x$nonFunctional + x$isOOF + x$hasStops)
+  x$total <- NULL
+  x
+}))
+colnames(df3) <- c('value', 'node', 'prev_node')
+
+df4 <- rbindlist(list(df0, df1,df2,df3), use.names = TRUE) 
+df5 <- anti_join(df4, df4, by = join_by(node == prev_node))
+df5$prev_node <- df5$node
+df5$node <- NA
+
+df6 <- rbindlist(list(df4, df5))
+
+ggplot(df6, aes(y=value, axis1 = prev_node, axis2=node)) +
+  geom_sankey()
+```
+
+```{r, eval=FALSE}
+# Step 1: Flatten the chainUsage data with additional 'goodReads' calculation
+chain_usage_df <- do.call(rbind, lapply(names(data$chainUsage$chains), function(chain) {
+  chain_data <- data$chainUsage$chains[[chain]]
+  
+  # Calculate goodReads as total - (nonFunctional + isOOF + hasStops)
+  goodReads <- chain_data$total - (chain_data$nonFunctional + chain_data$isOOF + chain_data$hasStops)
+  
+  # Create a dataframe for the chain totals and individual categories
+  chain_df <- rbind(
+    # data.frame(from = "aligned", to = chain, count = chain_data$total),
+    data.frame(chain = chain, final = paste(chain, "goodReads", sep = "_"), count = goodReads),
+    data.frame(chain = chain, final = paste(chain, "nonFunctional", sep = "_"), count = chain_data$nonFunctional),
+    data.frame(chain = chain, final = paste(chain, "isOOF", sep = "_"), count = chain_data$isOOF),
+    data.frame(chain = chain, final = paste(chain, "hasStops", sep = "_"), count = chain_data$hasStops)
+  )
+  
+  chain_df$final <- gsub(paste0("^", chain, "_"), "", chain_df$final)
+  chain_df$aligned <- 'Yes'
+  return(chain_df)
+}))
+
+chain_usage_df$source
+
+# Step 2: Combine this with the previous data (totalReadsProcessed, notAligned, and notAlignedReasons)
+
+# Data for total reads processed, aligned, and not aligned
+total_reads_df <- rbind(
+  data.frame(from = "totalReadsProcessed", to = "aligned", count = data$aligned),
+  data.frame(from = "totalReadsProcessed", to = "notAligned", count = data$notAligned)
+)
+
+# Data for not aligned reasons
+not_aligned_df <- data.frame(
+  aligned = 'No',
+  chain = rep("None", length(data$notAlignedReasons)),
+  final = names(data$notAlignedReasons),
+  count = unlist(data$notAlignedReasons)
+)
+not_aligned_df
+
+# Combine all dataframes
+combined_df <- rbind(
+  total_reads_df,
+  chain_usage_df,
+  not_aligned_df
+)
+
+# Filter out rows with count 0
+combined_df <- combined_df[combined_df$count > 0,]
+
+# View the combined dataframe
+print(combined_df)
+
+# Assuming combined_df is your final dataframe
+ggplot(combined_df,
+       aes(axis1 = from, axis2 = to, y = count)) +
+  geom_alluvium(aes(fill = to)) +
+  geom_stratum() +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum))) +
+  scale_x_discrete(limits = c("from", "to"), expand = c(0.15, 0.05)) +
+  labs(title = "Alluvial Plot of T-cell Repertoire Sequencing",
+       y = "Count") +
+  theme_minimal()
+
+```
+
+```{r, eval=FALSE}
+rbind(not_aligned_df, chain_usage_df) %>%
+  filter(count > 0) %>%
+ggplot(
+       aes(axis1 = aligned, axis2 = chain, axis3=final, y=count)) +
+  geom_alluvium(aes(fill = final),
+                width = 1/8, knot.pos = 0, reverse = FALSE) +
+  guides(fill = "none") +
+  geom_stratum(alpha = .25, width = 1/8, reverse = FALSE) +
+  geom_text(stat = "stratum", aes(label = after_stat(stratum)),
+            reverse = FALSE) +
+  scale_x_continuous(breaks = 1:3, labels = c('Aligned', 'Chain', 'Status')) +
+  coord_flip() 
+```
+
+
 ```{r}
 data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
-qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE, ignore.case = TRUE)
+qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE, ignore.case = FALSE)
 names(qc_metrics) <- gsub('.+(.-F\\w+).[qQ][cC].+', '\\1', qc_metrics)
 qc_metrics <- lapply(qc_metrics, read.table, sep=':', strip.white=TRUE)
 qc_metrics <- data.table::rbindlist(qc_metrics, idcol='sample')
@@ -69,15 +189,15 @@ qc_metadata <- qc_metadata %>%
 
 ```{r, fig.width=10, fig.height=8}
 metrics <- c(
-  "Off target (non TCR/IG) reads", 
-  "Reads with no V or J hits",
-  "Reads used in clonotypes", 
-  "Successfully aligned reads",
-  "Alignments that do not cover CDR3", 
-  "Unassigned alignments in clonotype assembly" ,
   "UMIs artificial diversity eliminated", 
   "Reads dropped in tags error correction and filtering",
-  "Barcode collisions in clonotype assembly"
+  "Barcode collisions in clonotype assembly",
+  "Off target (non TCR/IG) reads", 
+  "Reads with no V or J hits",
+  "Successfully aligned reads",
+  "Alignments that do not cover CDR3", 
+  "Unassigned alignments in clonotype assembly",
+  "Reads used in clonotypes"
 )
 figures[['QC_large']] <-
   left_join(qc_metrics, qc_metadata, by='sample') %>%
@@ -101,15 +221,15 @@ figures[['QC_large']]
 
 ```{r, fig.width=10, fig.height=8}
 metrics <- c(
-  "Off target (non TCR/IG) reads", 
-  "Reads with no V or J hits",
-  "Reads used in clonotypes", 
-  "Successfully aligned reads",
-  "Alignments that do not cover CDR3", 
-  "Unassigned alignments in clonotype assembly" ,
   "UMIs artificial diversity eliminated", 
   "Reads dropped in tags error correction and filtering",
-  "Barcode collisions in clonotype assembly"
+  "Barcode collisions in clonotype assembly",
+  "Off target (non TCR/IG) reads", 
+  "Reads with no V or J hits",
+  "Successfully aligned reads",
+  "Alignments that do not cover CDR3", 
+  "Unassigned alignments in clonotype assembly",
+  "Reads used in clonotypes"
 )
 figures[['QC_small']] <-
   left_join(qc_metrics, qc_metadata, by='sample') %>%
