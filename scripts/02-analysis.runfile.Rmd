@@ -543,7 +543,7 @@ figures[['clone_count_proportion_large_TRATRB']] <-
   # theme_bw() +
   theme(axis.text.x = element_text(angle=90)) +
   scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
-  labs(x='sample', y='Portion of repertoire', fill='Clonotype counts') +
+  labs(x='sample', y='Portion of repertoire', fill='UMI counts') +
   facet_nested(~kit + chain, scales = 'free_x') 
 figures[['clone_count_proportion_large_TRATRB']]
 ```
@@ -586,7 +586,7 @@ figures[['clone_count_proportion_small_TRATRB']] <-
   # theme_bw() +
   theme(axis.text.x = element_text(angle=90)) +
   scale_fill_manual(values=color('muted')(6), labels=c('1','2-3','4-10','11-30','31-100', '101-MAX')) +
-  labs(x='sample', y='Portion of repertoire', fill='Clonotype counts') +
+  labs(x='sample', y='Portion of repertoire', fill='UMI counts') +
   facet_nested(~kit + chain, scales = 'free_x') 
 figures[['clone_count_proportion_small_TRATRB']]
 ```
@@ -889,12 +889,306 @@ figures[['simpson_small']] <-
     geom_boxplot(outliers = FALSE) +
     geom_beeswarm(aes(shape=individual), size=2) +
   theme_bw() +
+  scale_y_log10() +
   theme(panel.spacing = unit(0, "lines")) +
   facet_wrap(~chain, strip.position = 'top', ncol=2) +
-  labs(x='Chain', y='Simpson index')
+  labs(x='Chain', y='Simpson index', caption='Y axis is log scaled')
   
 figures[['simpson_small']]
 ```
+
+# Jaccard similarity
+
+## By individual
+
+```{r, fig.width=8, fig.height=7}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt() %>%
+  mutate(Var1 = gsub('(.+)__TRA', '\\1', Var1),
+         Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
+  filter(grepl('2', Var1) & grepl('2', Var2))
+  # geom_vline(xintercept = c(4.5, 8.5, 12.5)) +
+  # geom_hline(yintercept = c(4.5, 8.5, 12.5))
+
+figures[['jaccard_F2_tra']]  <- 
+(ggplot(plotdata, aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(4.5, 8.5, 12.5), color='black') + 
+  geom_hline(yintercept = c(4.5,8.5, 12.5), color='black') + 
+  theme_bw() +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90)) +
+   scale_fill_viridis_c(option='plasma') +
+  labs(x=NULL, y=NULL, fill = 'Jaccard index')) #%>%
+  # ggplotly()
+figures[['jaccard_F2_tra']] 
+
+
+
+  # xlim(levels(plotdata$rn)) + ylim(levels(plotdata$variable)) +
+  # scale_fill_viridis_c(option='plasma') +
+  # theme(axis.text.x = element_text(angle=90)) +
+  # geom_vline(xintercept = c(4.5, 8.5, 12.5)) +
+  # geom_hline(yintercept = c(4.5, 8.5, 12.5)) 
+
+```
+
+## All
+
+### TRA
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_all_tra']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRA', '\\1', Var1),
+         Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(12.5,22.5, 34.5), color='red') + 
+  geom_hline(yintercept = c(12.5,22.5, 34.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_all_tra']] 
+```
+
+### TRB
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRB'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_all_trb']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRB', '\\1', Var1),
+         Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(12.5,22.5, 34.5), color='red') + 
+  geom_hline(yintercept = c(12.5,22.5, 34.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  viridis::scale_fill_viridis() + 
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_all_trb']] 
+```
+
+## Small
+
+### TRA
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'),
+                 size = include('S'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_small_tra']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRA', '\\1', Var1),
+         Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_small_tra']] 
+```
+
+### TRB
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRB'),
+                 size = include('S'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_small_trb']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRB', '\\1', Var1),
+         Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(6.5,10.5, 16.5), color='red') + 
+  geom_hline(yintercept = c(6.5,10.5, 16.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_small_trb']] 
+```
+
+## Large
+
+### TRA
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'),
+                 size = include('L'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_large_tra']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRA', '\\1', Var1),
+         Var2 = gsub('(.+)__TRA', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_large_tra']] 
+```
+
+### TRB
+
+```{r, fig.width=8, fig.height=8}
+plotdata <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRB'),
+                 size = include('L'))) 
+plotdata <- repOverlap(.data = plotdata$data, .method = 'jaccard') 
+plotdata <- round(plotdata, 2) %>%
+  reshape2::melt()
+
+figures[['jaccard_large_trb']] <- 
+  (plotdata %>%
+  mutate(Var1 = gsub('(.+)__TRB', '\\1', Var1),
+         Var2 = gsub('(.+)__TRB', '\\1', Var2)) %>%
+  ggplot(aes(x=Var1, y=Var2, fill=value)) +
+  geom_tile() +
+  geom_vline(xintercept = c(6.5,12.5, 18.5), color='red') + 
+  geom_hline(yintercept = c(6.5,12.5, 18.5), color='red') + 
+  theme_bw() +
+  labs(x='Sample 1', y='Sample 2', fill = 'Jaccard index') +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90))) %>%
+  ggplotly()
+figures[['jaccard_large_trb']] 
+```
+
+## MDS
+
+### Small
+
+#### TRB
+
+```{r}
+imm_ov1 <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRB'),
+                 size = include('S'))) 
+imm_ov1 <- repOverlap(.data = imm_ov1$data, .method = "jaccard", .verbose = F)
+imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds") 
+figures[['jaccard_mds_small_TRB']] <-
+  as.data.frame(imm_ov1$points) %>%
+  rownames_to_column('Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
+  mutate(V1=scale(V1), V2=scale(V2)) %>%
+  ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
+  geom_point() +
+  lims(x=c(-3,3), y=c(-3,3))
+figures[['jaccard_mds_small_TRB']]
+```
+
+#### TRA
+
+```{r}
+imm_ov1 <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'),
+                 size = include('S'))) 
+imm_ov1 <- repOverlap(.data = imm_ov1$data, .method = "jaccard", .verbose = F)
+imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds") 
+figures[['jaccard_mds_small_TRA']] <-
+  as.data.frame(imm_ov1$points) %>%
+  rownames_to_column('Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
+  mutate(V1=scale(V1), V2=scale(V2)) %>%
+  ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
+  geom_point() +
+  lims(x=c(-3,3), y=c(-3,3))
+figures[['jaccard_mds_small_TRA']]
+```
+
+### Large
+
+#### TRB
+
+```{r}
+imm_ov1 <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRB'),
+                 size = include('L'))) 
+imm_ov1 <- repOverlap(.data = imm_ov1$data, .method = "jaccard", .verbose = F)
+imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds") 
+figures[['jaccard_mds_large_TRB']] <-
+  as.data.frame(imm_ov1$points) %>%
+  rownames_to_column('Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
+  mutate(V1=scale(V1), V2=scale(V2)) %>%
+  ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
+  geom_point() +
+  lims(x=c(-3,3), y=c(-3,3))
+figures[['jaccard_mds_large_TRB']]
+```
+
+#### TRA
+
+```{r}
+imm_ov1 <- repFilter(rep_data,
+            .method = 'by.meta',
+            list(chain = include('TRA'),
+                 size = include('L'))) 
+imm_ov1 <- repOverlap(.data = imm_ov1$data, .method = "jaccard", .verbose = F)
+imm_ov1 <- repOverlapAnalysis(imm_ov1, "mds") 
+figures[['jaccard_mds_large_TRA']] <-
+  as.data.frame(imm_ov1$points) %>%
+  rownames_to_column('Sample') %>%
+  left_join(rep_data$meta, by='Sample') %>%
+  mutate(V1=scale(V1), V2=scale(V2)) %>%
+  ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
+  geom_point() +
+  lims(x=c(-3,3), y=c(-3,3))
+figures[['jaccard_mds_large_TRA']]
+```
+
 
 # Clonal overlap
 
@@ -1084,6 +1378,7 @@ figures[['clonal_overlap_mds_small_TRB']] <-
   mutate(V1=scale(V1), V2=scale(V2)) %>%
   ggplot(aes(x=V1, y=V2, color=kit, shape=individual)) +
   geom_point() +
+  # stat_ellipse(aes(group=kit)) +
   lims(x=c(-3,3), y=c(-3,3))
 figures[['clonal_overlap_mds_small_TRB']]
 ```
@@ -1150,51 +1445,565 @@ figures[['clonal_overlap_mds_large_TRA']] <-
 figures[['clonal_overlap_mds_large_TRA']]
 ```
 
-# Clonal abundance scaterplots
 
-```{r, fig.height=6, fig.width=6}
+<!-- # Rank abundance plots -->
+
+<!-- ## NEB -->
+
+<!-- ### Replicates -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L'),# 'S'), -->
+<!--                  kit = include('NEB'), -->
+<!--                  individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y) %>% -->
+<!--   filter(Sample_x == "N-F1LA") -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- fit <- cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman') -->
+<!-- figures[['clonal_abundance_neb_replicates_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   # facet_grid(Sample_x ~ Sample_y, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_neb_replicates_TRA']] -->
+<!-- ``` -->
+
+<!-- ### Small v large -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('NEB'), -->
+<!--                  individual = include('F2'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6)) #%>% -->
+<!--   # filter(grepl('N', Sample))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- # fit <- round(cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman'), 3) -->
+<!-- figures[['clonal_abundance_neb_small_v_large_TRB']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=0, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   # geom_density_2d_filled() + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_neb_small_v_large_TRB']] -->
+<!-- ``` -->
+
+<!-- ### All -->
+
+<!-- ```{r, fig.height=16, fig.width=16} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('NEB'), -->
+<!--                  # individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- figures[['clonal_abundance_neb_all_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_neb_all_TRA']] -->
+<!-- ``` -->
+
+<!-- ## QiaSeq -->
+
+<!-- ### Replicates -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L'),# 'S'), -->
+<!--                  kit = include('QiaSeq'), -->
+<!--                  individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y) %>% -->
+<!--   filter(Sample_x == "Q-F1LA") -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- fit <- cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman') -->
+<!-- figures[['clonal_abundance_qiaseq_replicates_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   # facet_grid(Sample_x ~ Sample_y, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_qiaseq_replicates_TRA']] -->
+<!-- ``` -->
+
+<!-- ### Small v large -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('QiaSeq'), -->
+<!--                  individual = include('F2'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6)) #%>% -->
+<!--   # filter(grepl('N', Sample))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- # fit <- round(cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman'), 3) -->
+<!-- figures[['clonal_abundance_qiaseq_small_v_large_TRB']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=0, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   # geom_density_2d_filled() + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_qiaseq_small_v_large_TRB']] -->
+<!-- ``` -->
+
+<!-- ### All -->
+
+<!-- ```{r, fig.height=16, fig.width=16} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('QiaSeq'), -->
+<!--                  # individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- figures[['clonal_abundance_qiaseq_all_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_x ~ Sample_y, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_qiaseq_all_TRA']] -->
+<!-- ``` -->
+
+<!-- ## Takara -->
+
+<!-- ### Replicates -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L'),# 'S'), -->
+<!--                  kit = include('Takara'), -->
+<!--                  individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y) %>% -->
+<!--   filter(Sample_x == "T-F1LA") -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- fit <- cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman') -->
+<!-- figures[['clonal_abundance_takara_replicates_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   # facet_grid(Sample_x ~ Sample_y, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_takara_replicates_TRA']] -->
+<!-- ``` -->
+
+<!-- ### Small v large -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('Takara'), -->
+<!--                  individual = include('F2'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6)) #%>% -->
+<!--   # filter(grepl('N', Sample))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- # fit <- round(cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman'), 3) -->
+<!-- figures[['clonal_abundance_takara_small_v_large_TRB']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=0, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   # geom_density_2d_filled() + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_takara_small_v_large_TRB']] -->
+<!-- ``` -->
+
+<!-- ### All -->
+
+<!-- ```{r, fig.height=16, fig.width=16} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('Takara'), -->
+<!--                  # individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- figures[['clonal_abundance_takara_all_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_takara_all_TRA']] -->
+<!-- ``` -->
+
+<!-- ## Cellecta -->
+
+<!-- ### Replicates -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L'),# 'S'), -->
+<!--                  kit = include('Cellecta'), -->
+<!--                  individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y) %>% -->
+<!--   filter(Sample_x == "C-F1LA") -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- fit <- cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman') -->
+<!-- figures[['clonal_abundance_cellecta_replicates_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   # facet_grid(Sample_x ~ Sample_y, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_cellecta_replicates_TRA']] -->
+<!-- ``` -->
+
+<!-- ### Small v large -->
+
+<!-- ```{r, fig.height=6, fig.width=6} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('Cellecta'), -->
+<!--                  individual = include('F2'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6)) #%>% -->
+<!--   # filter(grepl('N', Sample))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- # fit <- round(cor(plotdata$Proportion_x, plotdata$Proportion_y, method = 'spearman'), 3) -->
+<!-- figures[['clonal_abundance_cellecta_small_v_large_TRB']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=0, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   # geom_density_2d_filled() + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_cellecta_small_v_large_TRB']] -->
+<!-- ``` -->
+
+<!-- ### All -->
+
+<!-- ```{r, fig.height=16, fig.width=16} -->
+<!-- plotdata <- repFilter(rep_data, -->
+<!--             .method = 'by.meta', -->
+<!--             list(size = include('L', 'S'), -->
+<!--                  kit = include('Cellecta'), -->
+<!--                  # individual = include('F1'), -->
+<!--                  chain = include('TRA') -->
+<!--             )) -->
+
+<!-- plotdata <- lapply(plotdata$data, function(x) { -->
+<!--   select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>% -->
+<!--     mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name), -->
+<!--            J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name), -->
+<!--            rank = rank(-Proportion)) -->
+<!-- }) %>% -->
+<!--   rbindlist(idcol='Sample') %>% -->
+<!--   mutate(Sample = str_sub(Sample,1,  -6))  -->
+<!-- plotdata <- plotdata %>% -->
+<!--   full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>% -->
+<!--   filter(Sample_x != Sample_y)# %>% -->
+<!--   # filter(pmin(rank_x, rank_y) < 100) -->
+<!--   # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire -->
+<!-- figures[['clonal_abundance_cellecta_all_TRA']] <- ggplot(plotdata, aes(x=rank_x, y=rank_y)) + -->
+<!--   geom_point(alpha=0.7, size=0.5) + -->
+<!--   ggpubr::stat_cor(aes(x=Proportion_x, y=Proportion_y, label = paste(after_stat(rr.label), after_stat(p.label), sep = "~`,`~")), -->
+<!--                    method='spearman', label.y=-0.5, label.x = 0, output.type = 'expression', size =2) + -->
+<!--   scale_x_log10() + scale_y_log10() + -->
+<!--   # scale_y_continuous(limits = c(-10, NA)) + -->
+<!--   facet_grid(Sample_y ~ Sample_x, scales='free') + -->
+<!--   labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))  -->
+<!-- figures[['clonal_abundance_cellecta_all_TRA']] -->
+<!-- ``` -->
+
+# rank abundance corr
+
+```{r, fig.height=16, fig.width=16}
 plotdata <- repFilter(rep_data,
             .method = 'by.meta',
-            list(chain = include('TRA'),
-                 size = include('L'),
-                 kit = include('NEB'),
-                 individual = include('F2'))) 
+            list(size = include('L', 'S'),
+                 # kit = include('Cellecta'),
+                 # individual = include('F1'),
+                 chain = include('TRA')
+            ))
 
-plotdata <- lapply(plotdata$data, select, c('CDR3.aa', 'Proportion')) %>%
-  rbindlist(idcol='Sample') %>%
-  mutate(Sample = str_sub(Sample,1,  -6)) #%>%
-  # filter(grepl('N', Sample)) 
-plotdata <- plotdata %>%
-  inner_join(plotdata, by='CDR3.aa', suffix=c('_x', '_y'), relationship = 'many-to-many') %>%
-  filter(Sample_x != Sample_y) %>%
-  filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire
-figures[['clonal_abundance_NF2_TRA']] <- ggplot(plotdata, aes(x=Proportion_x, y=Proportion_y)) +
-  geom_point(alpha=0.7, size=0.5) +
-  labs(x=unique(plotdata[['Sample_x']]), y=unique(plotdata[['Sample_y']]))
-  # geom_density_2d_filled() +
-  # facet_grid(Sample_x ~ Sample_y, scales='free')
-figures[['clonal_abundance_NF2_TRA']]
-```
-
-```{r, eval=FALSE, fig.height=25, fig.width=25}
-tmp <- repFilter(rep_data,
-            .method = 'by.meta',
-            list(chain = include('TRB'),
-                 size = include('L'))) 
-
-tmp <- lapply(tmp$data, select, c('CDR3.aa', 'Proportion')) %>%
+plotdata <- lapply(plotdata$data, function(x) {
+  select(x, c('CDR3.aa', 'V.name', 'J.name', 'Proportion')) %>%
+    mutate(V.name = gsub('([^(]+)\\(.*', '\\1', x$V.name),
+           J.name = gsub('([^(]+)\\(.*', '\\1', x$J.name),
+           rank = rank(-Proportion))
+}) %>%
   rbindlist(idcol='Sample') %>%
   mutate(Sample = str_sub(Sample,1,  -6)) 
-tmp <- tmp %>%
-  inner_join(tmp, by='CDR3.aa', suffix=c('_x', '_y'), relationship = 'many-to-many') %>%
-  filter(Sample_x != Sample_y) %>%
-  filter(max(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire
-figures[['clonal_abundance_scatter_large_TRB']] <- ggplot(tmp, aes(x=Proportion_x, y=Proportion_y)) +
-  geom_point(alpha=0.7, size=0.5) +
-  # geom_density_2d_filled() +
-  facet_grid(Sample_x ~ Sample_y, scales='free')
-figures[['clonal_abundance_scatter_large_TRB']]
-ggsave(here('figures/facet_grid_genes.png'), width = unit(15, 'in'), height = unit(15, 'in'))
+plotdata <- plotdata %>%
+  full_join(plotdata, by=c('CDR3.aa', 'V.name', 'J.name'), suffix=c('_x', '_y'), relationship = "many-to-many") %>%
+  filter(Sample_x != Sample_y)# %>%
+  # filter(pmin(rank_x, rank_y) < 100)
+  # filter(pmax(Proportion_x, Proportion_y) > 0.001) ## minimum 0.1% of one repertoire
+corr_data <- matrix(0, nrow = length(unique(plotdata$Sample_x)), ncol = length(unique(plotdata$Sample_y)), 
+                    dimnames = list(unique(plotdata$Sample_x), unique(plotdata$Sample_y))) 
+for (sample1 in unique(plotdata$Sample_x)) {
+  for (sample2 in unique(plotdata$Sample_x)) {
+    tmp <- plotdata %>%
+      filter(Sample_x == sample1, 
+             Sample_y == sample2)
+    corr_data[sample1, sample2] <- cor(tmp$Proportion_x, tmp$Proportion_y, method = 'spearman')
+  }
+}
+```
+
+## By individual
+
+### 2
+
+```{r}
+
+plotdata <- as.data.table(corr_data, keep.rownames=TRUE) %>% 
+  melt()
+plotdata <- plotdata %>%
+  filter(grepl('2', rn) & grepl('2', variable))
+plotdata <- plotdata %>%
+  mutate(rn = factor(rn, levels = gtools::mixedsort(unique(plotdata$rn))),
+         variable = factor(variable, levels = gtools::mixedsort(unique(plotdata$rn)))) %>%
+    arrange(rn, variable) 
+figures[['spearman_cor_F2']] <-
+(ggplot(plotdata, aes(x=rn, y=variable, fill = value)) +
+  geom_tile() +
+  xlim(levels(plotdata$rn)) + ylim(levels(plotdata$variable)) +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90)) +
+  geom_vline(xintercept = c(4.5, 8.5, 12.5)) +
+  geom_hline(yintercept = c(4.5, 8.5, 12.5)) +
+  labs(x=NULL, y=NULL, fill = 'Corr')) #%>%
+  # ggplotly()
+figures[['spearman_cor_F2']]
+```
+
+### 1
+
+```{r}
+plotdata <- as.data.table(corr_data, keep.rownames=TRUE) %>% 
+  melt()
+plotdata <- plotdata %>%
+  filter(grepl('1', rn) & grepl('1', variable))
+plotdata <- plotdata %>%
+  mutate(rn = factor(rn, levels = gtools::mixedsort(unique(plotdata$rn))),
+         variable = factor(variable, levels = gtools::mixedsort(unique(plotdata$rn)))) %>%
+    arrange(rn, variable) 
+
+figures[['spearman_cor_F1']] <-
+ggplot(plotdata, aes(x=rn, y=variable, fill = value)) +
+  geom_tile() +
+  xlim(levels(plotdata$rn)) + ylim(levels(plotdata$variable)) +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90)) +
+  geom_vline(xintercept = c(4.5, 7.5, 11.5)) +
+  geom_hline(yintercept = c(4.5, 7.5, 11.5)) +
+  labs(x=NULL, y=NULL, fill = 'Corr')
+figures[['spearman_cor_F1']] 
+```
+
+## All
+
+```{r}
+plotdata <- as.data.table(corr_data, keep.rownames=TRUE) %>% 
+  melt()
+# plotdata <- plotdata %>%
+  # filter(grepl('2', rn) & grepl('2', variable))
+plotdata <- plotdata %>%
+  mutate(rn = factor(rn, levels = gtools::mixedsort(unique(plotdata$rn))),
+         variable = factor(variable, levels = gtools::mixedsort(unique(plotdata$rn)))) %>%
+    arrange(rn, variable) 
+figures[['spearman_cor_all']] <-
+ggplot(plotdata, aes(x=rn, y=variable, fill = value)) +
+  geom_tile() +
+  xlim(levels(plotdata$rn)) + ylim(levels(plotdata$variable)) +
+  scale_fill_viridis_c(option='plasma') +
+  theme(axis.text.x = element_text(angle=90, vjust = 0.5)) +
+  geom_vline(xintercept = c(12.5, 22.5, 34.5)) +
+  geom_hline(yintercept = c(12.5, 22.5, 34.5)) +
+  labs(x=NULL, y=NULL, fill = 'Corr')
+figures[['spearman_cor_all']]
 ```
 
 # Render report

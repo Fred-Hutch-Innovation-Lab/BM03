@@ -314,3 +314,50 @@ figures[['clonal_overlap_mds_large_TRB']]
 ```{r}
 figures[['clonal_overlap_mds_large_TRA']]
 ```
+
+***
+
+# Shared clone correlation {.tabset}
+
+## All
+
+```{r, fig.height=16, fig.width=16}
+figures[['spearman_cor_all']]
+```
+
+
+## F2
+
+```{r, fig.height=6, fig.width=6}
+figures[['spearman_cor_F2']]
+```
+
+## F1
+
+```{r, fig.height=6, fig.width=6}
+figures[['spearman_cor_F1']]
+```
+
+***
+
+# Jaccard {.tabset}
+
+## All
+
+```{r, fig.height=16, fig.width=16}
+figures[['jaccard_all_tra']]
+```
+
+
+## F2
+
+```{r, fig.height=6, fig.width=6}
+figures[['jaccard_F2_tra']] 
+```
+
+## F1
+
+```{r, fig.height=6, fig.width=6}
+figures[['jaccard_cor_F1']]
+```
+
