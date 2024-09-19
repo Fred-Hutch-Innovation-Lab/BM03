@@ -167,7 +167,7 @@ ggplot(
 
 
 ```{r}
-data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
+data_dir <- here('../processing/mixcr/downsampled_data/by_reads/')
 qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE, ignore.case = FALSE)
 names(qc_metrics) <- gsub('.+(.-F\\w+).[qQ][cC].+', '\\1', qc_metrics)
 qc_metrics <- lapply(qc_metrics, read.table, sep=':', strip.white=TRUE)
@@ -281,7 +281,7 @@ for (i in c('L', 'S')) {
       knitr::kable(format.args = list(big.mark = ","))
   }
 }
-figures[['fastqc_NEB_S']]
+figures[['fastqc_QiaSeq_L']]
 ```
 
 # Saturation curves
