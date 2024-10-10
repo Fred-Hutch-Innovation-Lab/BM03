@@ -54,42 +54,6 @@ parse_name <- function(x) {
 }
 ```
 
-```{r, eval=FALSE}
-my_repLoad <- function(filepath) {
-  x <- read.csv(filepath, header=TRUE, sep='\t') %>%
-    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
-    rename('Clones'=uniqueMoleculeCount,
-           'Proportion'=uniqueMoleculeFraction)
-  y <- suppressMessages(repLoad(filepath))[['data']]
-  chainname <- names(y)
-  message(chainname)
-  y[[chainname]] <- y[[chainname]] %>%
-    rename('Read.count'=Clones,
-           'Read.proportion'=Proportion)
-  y[[chainname]] <- merge(x,y[[chainname]], by.x='cloneId', by.y='Clone.ID') %>%
-    as_tibble()
-  y
-    # rename("Clones"=uniqueMoleculeCount,
-    #        "Proportion"=uniqueMoleculeFraction,
-    #        "CDR3.nt"=nSeqCDR3,
-    #        "CDR3.aa"=aaSeqCDR3,
-    #        "V.name"=allVHitsWithScore,
-    #        "D.name"=allDHitsWithScore,
-    #        "J.name"=allJHitsWithScore,
-    #        "V.end"=,
-    #        "D.start"=,
-    #        "D.end"=,
-    #        "J.start"=,
-    #        "VJ.ins"=,
-    #        "VD.ins"=,
-    #        "DJ.ins"=,
-    #        "Sequence")
-}
-
-tmp <- lapply(dir(here('../processing/mixcr/qiaseq/Q-F1LA/'), pattern = '*_[TI].+.tsv', full.names = TRUE), 
-              my_repLoad)
-```
-
 # Generate RDS
 
 ```{r downsampled_data_UMI, eval=FALSE}
