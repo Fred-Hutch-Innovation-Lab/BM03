@@ -36,155 +36,24 @@ figures <- list()
 
 ```{r}
 parse_name <- function(x) {
-  x <- as.data.frame(str_match(x, '(^.)-(F\\d)(L|S)(A|B)?_*(.+)?'))
+  x <- as.data.frame(str_match(x, '^([^-]+)(?:-combined)?-(F\\d)(L|S)(A|B)?_?(.+)?'))
+  # as.data.frame(str_match(x,      '(^.+-F\\d[^_]*)_+([^_]*)?'))
   colnames(x) <- c(
     'sample', 'kit', 'individual', 'size', 'replicate', 'chain'
   )
-  x %>%
+  x <- x %>%
     mutate(
       replicate = if_else(is.na(replicate), 'A', replicate),
       kit = case_when(
         kit == 'N' ~ 'NEB',
         kit == 'Q' ~ 'QiaSeq',
         kit == 'T' ~ 'Takara',
-        kit == 'C' ~ 'Cellecta',
+        kit == 'C2' ~ 'Cellecta',
         .default = 'unknown'
       )
     )
+  x
 }
-```
-
-# Generate RDS
-
-```{r downsampled_data_UMI, eval=FALSE}
-data_dir <- here('../processing/mixcr/downsampled_data/by_umi/')
-rep_data_downsampled <- repLoad(data_dir)
-
-#parse metadata from samplenames, based on previous function
-metadata <- as_tibble(rbindlist(lapply(names(rep_data_downsampled$data), parse_name)))
-metadata <- metadata %>%
-  mutate(Sample = sample,
-         sample = NULL)
-metadata$chain[is.na(metadata$chain)] <- 'other'
-metadata$chain <- factor(metadata$chain, 
-                         levels = c(
-                           'TRA', 'TRB',
-                           'TRD', 'TRG',
-                           'ILH', 'IGK', 'IGH', 'IGL',
-                           'other'
-                         ))
-rep_data_downsampled$meta <- metadata
-
-## Fix clone count to be UMIs rather than reads
-## still retains read counts too, but sets Clones and Proportion to be UMI based
-for (sample in names(rep_data_downsampled$data)) {
-  x <- file.path(here('../processing/mixcr/downsampled_data/by_umi/'), 
-                 gsub('(.-F[0-9][^_]+).+','\\1', sample),
-                 paste0(sample, '.tsv'))
-            
-  #        pattern=paste0(sample, '.tsv'),
-  #        recursive = TRUE, full.names = TRUE) %>%
-  x <- read.csv(x, header=TRUE, sep='\t') %>%
-    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
-    rename('Clones'=uniqueMoleculeCount,
-           'Proportion'=uniqueMoleculeFraction)
-  y <- rep_data_downsampled$data[[sample]]
-  y <- y %>%
-    rename('Read.count'=Clones,
-           'Read.proportion'=Proportion)
-  rep_data_downsampled$data[[sample]] <- merge(x,y, by.x='cloneId', by.y='Clone.ID') %>%
-    as_tibble()
-}
-
-saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled_umi.rds'))
-```
-
-```{r downsampled_data_reads, eval=FALSE}
-data_dir <- here('../processing/mixcr/downsampled_data/by_reads/')
-rep_data_downsampled <- repLoad(data_dir)
-
-#parse metadata from samplenames, based on previous function
-metadata <- as_tibble(rbindlist(lapply(names(rep_data_downsampled$data), parse_name)))
-metadata <- metadata %>%
-  mutate(Sample = sample,
-         sample = NULL)
-metadata$chain[is.na(metadata$chain)] <- 'other'
-metadata$chain <- factor(metadata$chain, 
-                         levels = c(
-                           'TRA', 'TRB',
-                           'TRD', 'TRG',
-                           'ILH', 'IGK', 'IGH', 'IGL',
-                           'other'
-                         ))
-rep_data_downsampled$meta <- metadata
-
-## Fix clone count to be UMIs rather than reads
-## still retains read counts too, but sets Clones and Proportion to be UMI based
-for (sample in names(rep_data_downsampled$data)) {
-  x <- file.path(here('../processing/mixcr/downsampled_data/by_reads/'), 
-                 gsub('(.-F[0-9][^_]+).+','\\1', sample),
-                 paste0(sample, '.tsv'))
-            
-  #        pattern=paste0(sample, '.tsv'),
-  #        recursive = TRUE, full.names = TRUE) %>%
-  x <- read.csv(x, header=TRUE, sep='\t') %>%
-    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
-    rename('Clones'=uniqueMoleculeCount,
-           'Proportion'=uniqueMoleculeFraction)
-  y <- rep_data_downsampled$data[[sample]]
-  y <- y %>%
-    rename('Read.count'=Clones,
-           'Read.proportion'=Proportion)
-  rep_data_downsampled$data[[sample]] <- merge(x,y, by.x='cloneId', by.y='Clone.ID') %>%
-    as_tibble()
-}
-
-saveRDS(rep_data_downsampled, here('rds/rep_data_downsampled_reads.rds'))
-```
-
-```{r full_data, eval=FALSE, message=FALSE}
-data_dir <- here('../processing/mixcr/full_data/')
-rep_data <- repLoad(data_dir)
-
-#parse metadata from samplenames, based on previous function
-metadata <- as_tibble(rbindlist(lapply(names(rep_data$data), parse_name)))
-metadata <- metadata %>%
-  mutate(Sample = sample,
-         sample = NULL)
-metadata$chain[is.na(metadata$chain)] <- 'other'
-metadata$chain <- factor(metadata$chain, 
-                         levels = c(
-                           'TRA', 'TRB',
-                           'TRD', 'TRG',
-                           'ILH', 'IGK', 'IGH', 'IGL',
-                           'other'
-                         ))
-rep_data$meta <- metadata
-
-## Fix clone count to be UMIs rather than reads
-## still retains read counts too, but sets Clones and Proportion to be UMI based
-for (sample in names(rep_data$data)) {
-  kit <- filter(rep_data$meta, Sample == sample)
-  kit <- tolower(kit$kit)
-  x <- file.path(here('../processing/mixcr/full_data/'),
-                 kit,
-                 gsub('(.-F[0-9][^_]+).+','\\1', sample),
-                 paste0(sample, '.tsv'))
-            
-  #        pattern=paste0(sample, '.tsv'),
-  #        recursive = TRUE, full.names = TRUE) %>%
-  x <- read.csv(x, header=TRUE, sep='\t') %>%
-    select(cloneId, uniqueMoleculeCount, uniqueMoleculeFraction) %>%
-    rename('Clones'=uniqueMoleculeCount,
-           'Proportion'=uniqueMoleculeFraction)
-  y <- rep_data$data[[sample]]
-  y <- y %>%
-    rename('Read.count'=Clones,
-           'Read.proportion'=Proportion)
-  rep_data$data[[sample]] <- merge(x,y, by.x='cloneId', by.y='Clone.ID') %>%
-    as_tibble()
-}
-saveRDS(rep_data, here('rds/rep_data_full.rds'))
 ```
 
 # Load TCR data
