@@ -23,23 +23,7 @@ library(kableExtra)
 This report shows data from the bulk TCR sequencing from the BM03 project processed using [MixCR](https://mixcr.com/). 
 MixCR settings were kept as consistent as possible. Primer locations and UMI descriptions were changed based on specifications in kit manuals. This report focuses on overall library quality for diagnostics of sequencing and pipeline issues, and hence does **not used subsampled data**.
 
-This report includes data from all sequencing done as of Aug 21 2024. Data is pulled from these repositories:
-
-Takara:
-
-`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240723_VH00738_256_AAFWG5MM5/FHIL_07232024_2024-07-25T19_16_58_f111bc7-425851455/BCL_Convert_07_25_2024_12_22_52-752495789/`
-
-celecta:
-
-`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240813_VH00738_265_AAG3G77M5/FHIL_08132024_2024-08-14T21_59_11_2bb08af-428286878/BCL_Convert_08_14_2024_15_02_05-760993109/`
-
-neb:
-
-`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240730_VH00738_259_AAFWGHHM5/FHIL_07302024_2024-07-30T17_34_21_8f33e36-426337156/BCLConvert_08_01_2024_00_22_32Z-755097350/`
-
-qiaseq:
-
-`/fh/fast/_IRC/FHIL/grp/NextSeq_SteamPlant/240614_VH00738_246_AAFVY2MM5/FHIL_06142024_2024-06-14T19_50_58_68f53f1-421632874/BCLConvert_06_15_2024_16_53_29Z-740072376/`
+This report includes data from all sequencing done as of Oct 23 2024. The Cellecta data includes the second sequencing run only. The Qiaseq data uses 2 sequencing runs.
 
 Data was generated with the following kits:
 
@@ -64,34 +48,34 @@ knitr::kable(qc_metadata %>% select(-chain))
 
 ***
 
-# FastQC
+<!-- # FastQC -->
 
-Quick check of sequencing quality
+<!-- Quick check of sequencing quality -->
 
-## Cellecta
+<!-- ## Cellecta -->
 
-```{r}
-knitr::kables(list(figures[['fastqc_Cellecta_L']], figures[['fastqc_Cellecta_S']]))
-```
+<!-- ```{r} -->
+<!-- knitr::kables(list(figures[['fastqc_Cellecta_L']], figures[['fastqc_Cellecta_S']])) -->
+<!-- ``` -->
 
 
-## Qiaseq
+<!-- ## Qiaseq -->
 
-```{r}
-knitr::kables(list(figures[['fastqc_QiaSeq_L']], figures[['fastqc_QiaSeq_S']]))
-```
+<!-- ```{r} -->
+<!-- knitr::kables(list(figures[['fastqc_QiaSeq_L']], figures[['fastqc_QiaSeq_S']])) -->
+<!-- ``` -->
 
-## NEB
+<!-- ## NEB -->
 
-```{r}
-knitr::kables(list(figures[['fastqc_NEB_L']], figures[['fastqc_NEB_S']]))
-```
+<!-- ```{r} -->
+<!-- knitr::kables(list(figures[['fastqc_NEB_L']], figures[['fastqc_NEB_S']])) -->
+<!-- ``` -->
 
-## Takara
+<!-- ## Takara -->
 
-```{r}
-knitr::kables(list(figures[['fastqc_Takara_L']], figures[['fastqc_Takara_S']]))
-```
+<!-- ```{r} -->
+<!-- knitr::kables(list(figures[['fastqc_Takara_L']], figures[['fastqc_Takara_S']])) -->
+<!-- ``` -->
 
 # MixCR QC
 

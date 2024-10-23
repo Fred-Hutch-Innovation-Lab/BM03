@@ -26,21 +26,23 @@ figures <- list()
 
 ```{r}
 parse_name <- function(x) {
-  x <- as.data.frame(str_match(x, '(^.)-(F\\d)(L|S)(A|B)?_?(.+)?'))
+  x <- as.data.frame(str_match(x, '^([^-]+)(?:-combined)?-(F\\d)(L|S)(A|B)?_?(.+)?'))
+  # as.data.frame(str_match(x,      '(^.+-F\\d[^_]*)_+([^_]*)?'))
   colnames(x) <- c(
     'sample', 'kit', 'individual', 'size', 'replicate', 'chain'
   )
-  x %>%
+  x <- x %>%
     mutate(
       replicate = if_else(is.na(replicate), 'A', replicate),
       kit = case_when(
         kit == 'N' ~ 'NEB',
         kit == 'Q' ~ 'QiaSeq',
         kit == 'T' ~ 'Takara',
-        kit == 'C' ~ 'Cellecta',
+        kit == 'C2' ~ 'Cellecta',
         .default = 'unknown'
       )
     )
+  x
 }
 ```
 
@@ -100,9 +102,9 @@ ggplot(
 
 
 ```{r}
-data_dir <- here('../processing/mixcr/downsampled_data/by_reads/')
+data_dir <- here('../processing/mixcr/RNA/downsampled_data/by_reads/')
 qc_metrics <- list.files(path = data_dir, pattern = '*QC.txt', recursive = TRUE, full.names = TRUE, ignore.case = FALSE)
-names(qc_metrics) <- gsub('.+(.-F\\w+).[qQ][cC].+', '\\1', qc_metrics)
+names(qc_metrics) <- gsub('.+/(.+-F\\w+)_[qQ][cC].+', '\\1', qc_metrics)
 qc_metrics <- lapply(qc_metrics, read.table, sep=':', strip.white=TRUE)
 qc_metrics <- data.table::rbindlist(qc_metrics, idcol='sample')
 qc_metrics <- qc_metrics %>%
@@ -187,9 +189,9 @@ figures[['QC_small']]
 
 # FastQC
 
-```{r}
+```{r, eval=FALSE}
 data_dir <- dir(here('../processing/fastqc/'), 'fastqc_data.txt', recursive = TRUE, full.names = TRUE)
-fastqc <- lapply(data_dir, 
+fastqc <- lapply(data_dir,
        function(x) {
          sample <- gsub('.*(.-F\\d[^_]+).+', '\\1', x)
          x <- readLines(x,n=8)[c(7,8)]
@@ -200,10 +202,10 @@ fastqc <- lapply(data_dir,
   unique()
 ```
 
-```{r}
+```{r, eval=FALSE}
 for (i in c('L', 'S')) {
   for (k in c('NEB', 'Takara', 'QiaSeq', 'Cellecta')) {
-    figures[[paste0(c('fastqc', k, i), collapse ='_')]] <- 
+    figures[[paste0(c('fastqc', k, i), collapse ='_')]] <-
       fastqc %>%
       left_join(qc_metadata, by = 'sample') %>%
       filter(size==i,
@@ -222,15 +224,18 @@ figures[['fastqc_QiaSeq_L']]
 ## UMIs
 
 ```{r}
-files <- dir(here('../processing/mixcr/'), 
+files <- dir(here('../processing/mixcr/RNA/downsampled_data/by_reads'), 
              'downsampling_summary.*.txt', 
              recursive = TRUE, 
              full.names = TRUE)
+
+# ^([^-]+)(?:-combined)?-(F\\d)(L|S)(A|B)?_?(.+)?
+  
 downsampling_umis <- lapply(
   files, 
   function(file) {
-    sample <- gsub('.*(.-F[0-9][^/]+).*', '\\1', file)
-    size <- gsub('.*_summary_([0-9]*).txt', '\\1', file)
+    sample <- basename(dirname(dirname(file)))# gsub('^([^-]+)(?:-combined)?-(F\\d)', '\\1', file)
+    size <- qc_metadata[qc_metadata$sample==sample,'size'] #gsub('.*_summary_([0-9]*).txt', '\\1', file)
     data <- read.table(file, header = TRUE, sep = '\t')
     return(list(sample=sample,
                 read_count=data$sumWeightAfter,
@@ -276,15 +281,16 @@ figures[['saturation_umis_small']]
 ## Clonotypes
 
 ```{r}
-files <- dir(here('../processing/mixcr'), 
-             'downsampling_summary_[0-9]*.txt', 
+files <- dir(here('../processing/mixcr/RNA/downsampled_data/by_reads'), 
+             'downsampling_summary.*.txt', 
              recursive = TRUE, 
              full.names = TRUE)
+
 downsampling_clonotypes <- lapply(
   files, 
   function(file) {
-    sample <- gsub('.*(.-F[0-9][^/]+).*', '\\1', file)
-    size <- gsub('.*_summary_([0-9]*).txt', '\\1', file)
+    sample <- basename(dirname(dirname(file)))# gsub('^([^-]+)(?:-combined)?-(F\\d)', '\\1', file)
+    size <- qc_metadata[qc_metadata$sample==sample,'size'] #gsub('.*_summary_([0-9]*).txt', '\\1', file)
     data <- read.table(file, header = TRUE, sep = '\t')
     return(list(sample=sample,
                 read_count=data$sumWeightAfter,
